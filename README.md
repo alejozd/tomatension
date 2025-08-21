@@ -1,16 +1,35 @@
-# tomatension
+# 🩺 TomaTensión – Control de Presión Arterial
 
-A new Flutter project.
+Una aplicación móvil simple y útil hecha en **Flutter** para ayudar a mi papá a registrar y monitorear su presión arterial diariamente.
 
-## Getting Started
+> Porque la salud empieza con buenos hábitos… y una app que no falla. 💙
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 📱 Funcionalidades
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- ✅ Registrar tensión arterial:
+  - Sistólica
+  - Diastólica
+  - Ritmo cardíaco
+  - Fecha y hora
+- 📊 Visualizar datos en listado y gráficos
+- 📅 Filtrar por rango de fechas
+- 📤 Exportar datos:
+  - Como archivo de base de datos (SQLite)
+  - Como archivo Excel (.xlsx)
+  - Compartir por correo, WhatsApp, etc.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🛠️ Tecnologías utilizadas
+
+- **Flutter** + **Dart** – Interfaz y lógica
+- **SQLite** – Base de datos local (`sqflite`)
+- **fl_chart** – Gráficos interactivos
+- **share_plus** – Compartir datos
+- **excel** – Generación de archivos Excel
+
+---
+
+## 📂 Estructura del proyecto
