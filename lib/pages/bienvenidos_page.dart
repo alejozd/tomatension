@@ -31,6 +31,7 @@ class BienvenidosPage extends StatelessWidget {
               },
               child: const Text('Ingresar Datos'),
             ),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -40,6 +41,7 @@ class BienvenidosPage extends StatelessWidget {
               },
               child: const Text('Ver Datos'),
             ),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(

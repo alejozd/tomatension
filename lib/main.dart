@@ -24,7 +24,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TomaTension',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        // Puedes personalizar el tema aquí
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        // Configuración global para los ElevatedButtons
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo, // Color de fondo
+            foregroundColor: Colors.white, // Color del texto y el icono
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20), // Borde más redondeado
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+          ),
+        ),
+      ),
       home: const BienvenidosPage(),
     );
   }
