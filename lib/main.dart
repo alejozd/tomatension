@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TomaTension',
+      title: 'Toma Tensión',
       theme: ThemeData(
         // Puedes personalizar el tema aquí
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
