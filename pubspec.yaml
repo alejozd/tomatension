@@ -1,5 +1,5 @@
 name: tomatension
-description: "A new Flutter project."
+description: "Aplicación para el registro y seguimiento de la tensión arterial y el ritmo cardíaco."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.9.0
@@ -42,6 +42,7 @@ dependencies:
   animated_button: ^0.3.1
   intl: ^0.19.0 
   progress_state_button: ^1.0.4
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:
@@ -53,9 +54,18 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+# La siguiente sección es la configuración para el paquete flutter_launcher_icons.
+# ¡Va aquí, a nivel raíz! No dentro de 'flutter:'
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/latido_del_corazon.png" # <--- Asegúrate de que esta ruta sea correcta para tu logo
+  min_sdk_android: 21
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -66,7 +76,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - assets/images/logoSplash.JPG
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

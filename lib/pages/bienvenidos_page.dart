@@ -1,11 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart'; // Importa el paquete
 import 'tomar_tension_page.dart';
 import 'ver_datos_page.dart';
 import 'exportar_datos_page.dart';
-import 'package:animated_button/animated_button.dart'; // Asegúrate de que esta importación esté presente
+import 'package:animated_button/animated_button.dart';
 
-class BienvenidosPage extends StatelessWidget {
+class BienvenidosPage extends StatefulWidget {
+  // Cambiamos a StatefulWidget para manejar el estado de la versión
   const BienvenidosPage({super.key});
+
+  @override
+  State<BienvenidosPage> createState() => _BienvenidosPageState();
+}
+
+class _BienvenidosPageState extends State<BienvenidosPage> {
+  String _appVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = packageInfo.version;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +43,6 @@ class BienvenidosPage extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            // Botón "Ingresar Datos"
             AnimatedButton(
               onPressed: () {
                 Navigator.push(
@@ -31,31 +52,27 @@ class BienvenidosPage extends StatelessWidget {
                   ),
                 );
               },
-              width: 200, // Ancho consistente para todos los botones
-              height: 50, // Altura para que el contenido se vea bien
-              color: Colors.blueAccent, // Color de fondo diferente
-              child: Padding(
-                // Agregamos Padding para un offset visual desde el borde izquierdo
-                padding: const EdgeInsets.only(left: 15.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: const [
-                    Icon(Icons.add, color: Colors.white),
-                    SizedBox(width: 10), // Espacio entre el icono y el texto
-                    Text(
-                      'Ingresar Datos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
+              width: 200,
+              height: 50,
+              color: Colors.blueAccent,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.add, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text(
+                    'Ingresar Datos',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 15), // Espacio entre botones
-            // Botón "Ver Datos"
+            const SizedBox(height: 15),
+
             AnimatedButton(
               onPressed: () {
                 Navigator.push(
@@ -63,11 +80,10 @@ class BienvenidosPage extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => const VerDatosPage()),
                 );
               },
-              width: 200, // Mismo ancho
+              width: 200,
               height: 50,
-              color: Colors.green, // Otro color diferente
+              color: Colors.green,
               child: Padding(
-                // Agregamos Padding para un offset visual desde el borde izquierdo
                 padding: const EdgeInsets.only(left: 15.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -86,8 +102,8 @@ class BienvenidosPage extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 15), // Espacio entre botones
-            // Botón "Exportar Datos"
+            const SizedBox(height: 15),
+
             AnimatedButton(
               onPressed: () {
                 Navigator.push(
@@ -97,28 +113,30 @@ class BienvenidosPage extends StatelessWidget {
                   ),
                 );
               },
-              width: 200, // Mismo ancho
+              width: 200,
               height: 50,
-              color: Colors.redAccent, // Otro color más
-              child: Padding(
-                // Agregamos Padding para un offset visual desde el borde izquierdo
-                padding: const EdgeInsets.only(left: 15.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: const [
-                    Icon(Icons.share_outlined, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      'Exportar Datos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
+              color: Colors.redAccent,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.share, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text(
+                    'Exportar Datos',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 30),
+            // Mostrar la versión de la aplicación
+            Text(
+              'Versión: $_appVersion',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),

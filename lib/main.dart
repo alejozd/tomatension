@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'pages/bienvenidos_page.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
+import 'pages/splash_page.dart'; // Importa tu nueva SplashPage
 
 void main() {
-  // Ensure Flutter widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Check if the platform is not Android or iOS
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Initialize FFI for desktop platforms
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
@@ -23,24 +20,22 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Toma Tensión',
+      title: 'TomaTension',
       theme: ThemeData(
-        // Puedes personalizar el tema aquí
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
-        // Configuración global para los ElevatedButtons
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.indigo, // Color de fondo
-            foregroundColor: Colors.white, // Color del texto y el icono
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20), // Borde más redondeado
+              borderRadius: BorderRadius.circular(20),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
           ),
         ),
       ),
-      home: const BienvenidosPage(),
+      home: const SplashPage(), // Establece SplashPage como la pantalla inicial
     );
   }
 }

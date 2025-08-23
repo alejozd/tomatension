@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // Necesario para Future.delayed
-import 'bienvenidos_page.dart'; // Importa la página a la que navegarás
+import 'dart:async';
+import 'bienvenidos_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -17,11 +17,9 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   _navigateToHome() async {
-    // Retraso de 3 segundos para mostrar el splash screen
     await Future.delayed(const Duration(seconds: 3), () {});
 
     if (mounted) {
-      // Asegura que el widget sigue montado antes de navegar
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const BienvenidosPage()),
@@ -32,32 +30,31 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple, // Color de fondo del splash
+      backgroundColor: Colors.white, // <--- Fondo blanco para tu logo
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Aquí puedes agregar un logo o imagen.
-            // Por ahora, pondremos un icono grande y un texto.
-            const Icon(
-              Icons
-                  .monitor_heart, // Icono de corazón, puedes usar tu latido-del-corazon.png
-              size: 100,
-              color: Colors.white,
+            // Tu imagen de ZambranoSoft
+            Image.asset(
+              'assets/images/logoSplash.JPG', // Asegúrate de que esta ruta sea correcta
+              width: 200, // Ajusta el tamaño según tu imagen
+              height: 200,
             ),
             const SizedBox(height: 20),
             const Text(
-              'TomaTension',
+              'TomaTension', // Puedes cambiar esto a 'ZambranoSoft' si quieres
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Colors
+                    .deepPurple, // Color oscuro para que se vea en fondo blanco
               ),
             ),
             const SizedBox(height: 50),
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.white,
+                Colors.deepPurple,
               ), // Color del indicador de carga
             ),
           ],
