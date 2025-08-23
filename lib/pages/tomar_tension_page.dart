@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:animated_button/animated_button.dart';
-import 'package:progress_state_button/progress_button.dart'; // Importa el ProgressButton y su ButtonState
+import 'package:progress_state_button/progress_button.dart';
 import '../models/tension_data.dart';
 import '../services/database_service.dart';
-
-// ELIMINADA: enum ButtonState { idle, loading, success, fail }
-// Ahora usaremos el ButtonState que viene de progress_state_button
 
 class TomarTensionPage extends StatefulWidget {
   const TomarTensionPage({super.key});
@@ -22,12 +19,55 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
   final DatabaseService _databaseService = DatabaseService();
 
   DateTime _selectedDateTime = DateTime.now();
-  // Usamos el ButtonState de la librería progress_state_button
   ButtonState _buttonState = ButtonState.idle;
+  bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
+    _sistoleController.addListener(_validateForm);
+    _diastoleController.addListener(_validateForm);
+    _ritmoCardiacoController.addListener(_validateForm);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _validateForm();
+    });
+  }
+
+  @override
+  void dispose() {
+    _sistoleController.removeListener(_validateForm);
+    _diastoleController.removeListener(_validateForm);
+    _ritmoCardiacoController.removeListener(_validateForm);
+    _sistoleController.dispose();
+    _diastoleController.dispose();
+    _ritmoCardiacoController.dispose();
+    super.dispose();
+  }
+
+  void _validateForm() {
+    final sistoleText = _sistoleController.text.trim();
+    final diastoleText = _diastoleController.text.trim();
+    final ritmoCardiacoText = _ritmoCardiacoController.text.trim();
+
+    final isValid =
+        sistoleText.isNotEmpty &&
+        diastoleText.isNotEmpty &&
+        ritmoCardiacoText.isNotEmpty;
+
+    if (_isFormValid != isValid) {
+      setState(() {
+        _isFormValid = isValid;
+        // Si el formulario deja de ser válido mientras el botón está en idle,
+        // nos aseguramos de que el estado visual refleje "deshabilitado".
+        if (!_isFormValid && _buttonState == ButtonState.idle) {
+          _buttonState =
+              ButtonState.fail; // Usamos fail para el look deshabilitado
+        } else if (_isFormValid && _buttonState == ButtonState.fail) {
+          _buttonState = ButtonState.idle; // Volvemos a idle si es válido
+        }
+      });
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -69,9 +109,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
   }
 
   Future<void> _saveData() async {
-    if (_sistoleController.text.isEmpty ||
-        _diastoleController.text.isEmpty ||
-        _ritmoCardiacoController.text.isEmpty) {
+    if (!_isFormValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Por favor, ingresa todos los datos.')),
@@ -86,9 +124,9 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
 
     try {
       final newTensionData = TensionData(
-        sistole: int.parse(_sistoleController.text),
-        diastole: int.parse(_diastoleController.text),
-        ritmoCardiaco: int.parse(_ritmoCardiacoController.text),
+        sistole: int.parse(_sistoleController.text.trim()),
+        diastole: int.parse(_diastoleController.text.trim()),
+        ritmoCardiaco: int.parse(_ritmoCardiacoController.text.trim()),
         fechaHora: _selectedDateTime,
       );
 
@@ -106,6 +144,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
         _ritmoCardiacoController.clear();
         setState(() {
           _selectedDateTime = DateTime.now();
+          _validateForm(); // Re-validar el formulario después de limpiar los campos
         });
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
@@ -118,7 +157,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _buttonState = ButtonState.fail;
+          _buttonState = ButtonState.fail; // Para indicar fallo de operación
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al guardar datos: ${e.toString()}')),
@@ -126,7 +165,8 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             setState(() {
-              _buttonState = ButtonState.idle;
+              _buttonState =
+                  ButtonState.idle; // Volver a idle después del error
             });
           }
         });
@@ -136,6 +176,36 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Definimos los widgets para cada estado, incluyendo un estado para "Faltan Datos"
+    final Map<ButtonState, Widget> stateWidgets = {
+      ButtonState.idle: const Text(
+        "Guardar",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      ),
+      ButtonState.loading: const Text(
+        "Cargando",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      ),
+      ButtonState.success: const Text(
+        "¡Guardado!",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      ),
+      ButtonState.fail: const Text(
+        // Este es el estado que usaremos para "deshabilitado" visualmente
+        "Faltan Datos",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      ),
+    };
+
+    // Definimos los colores para cada estado
+    final Map<ButtonState, Color> stateColors = {
+      ButtonState.idle: Colors.deepPurple,
+      ButtonState.loading: Colors.blue.shade300,
+      ButtonState.success: Colors.green.shade400,
+      ButtonState.fail:
+          Colors.grey.shade600, // Color gris para el estado deshabilitado/fallo
+    };
+
     return Scaffold(
       appBar: AppBar(title: const Text('Ingresar Datos de Tensión')),
       body: SingleChildScrollView(
@@ -230,45 +300,14 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
 
             Center(
               child: ProgressButton(
-                stateWidgets: {
-                  ButtonState.idle: const Text(
-                    // Asegúrate de que los textos sean const
-                    "Guardar",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  ButtonState.loading: const Text(
-                    "Cargando",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  ButtonState.success: const Text(
-                    "¡Guardado!",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  ButtonState.fail: const Text(
-                    "Error",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                },
-                stateColors: {
-                  ButtonState.idle: Colors.deepPurple,
-                  ButtonState.loading: Colors.blue.shade300,
-                  ButtonState.success: Colors.green.shade400,
-                  ButtonState.fail: Colors.red.shade400,
-                },
-                onPressed: _saveData,
-                state: _buttonState,
+                stateWidgets: stateWidgets, // Usamos el mapa definido aquí
+                stateColors: stateColors, // Usamos el mapa definido aquí
+                // onPressed es null si el formulario no es válido, deshabilitando el botón
+                onPressed: _isFormValid && _buttonState == ButtonState.idle
+                    ? _saveData
+                    : null,
+                state:
+                    _buttonState, // El estado del botón se controla directamente
                 padding: const EdgeInsets.all(8.0),
                 minWidth: 150,
                 maxWidth: 200,
