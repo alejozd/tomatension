@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import '../models/tension_data.dart';
 import '../services/database_service.dart';
+import 'package:animated_button/animated_button.dart'; // Importa el AnimatedButton
 
 class ExportarDatosPage extends StatelessWidget {
   const ExportarDatosPage({super.key});
@@ -140,17 +141,57 @@ class ExportarDatosPage extends StatelessWidget {
                 style: TextStyle(fontSize: 18),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
+              const SizedBox(height: 30), // Más espacio para la estética
+              // Botón "Archivo de base de datos"
+              AnimatedButton(
                 onPressed: () => _exportDatabase(context),
-                icon: const Icon(Icons.share),
-                label: const Text('Archivo de base de datos'),
+                width: 250, // Ancho consistente
+                height: 55, // Altura consistente
+                color: Colors.lightBlue, // Color diferente
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.storage,
+                      color: Colors.white,
+                    ), // Icono para base de datos
+                    SizedBox(width: 10),
+                    Text(
+                      'Archivo de Base de Datos',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
+              const SizedBox(height: 15), // Espacio entre botones
+              // Botón "Archivo de Excel"
+              AnimatedButton(
                 onPressed: () => _exportToExcel(context),
-                icon: const Icon(Icons.share),
-                label: const Text('Archivo de Excel'),
+                width: 250, // Ancho consistente
+                height: 55, // Altura consistente
+                color: Colors.teal, // Otro color diferente
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.insert_drive_file,
+                      color: Colors.white,
+                    ), // Icono para Excel
+                    SizedBox(width: 10),
+                    Text(
+                      'Archivo de Excel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
