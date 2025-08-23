@@ -312,7 +312,7 @@ class _VerDatosPageState extends State<VerDatosPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10), // Espacio entre filas
+                              const SizedBox(height: 1), // Espacio entre filas
                               // Fila 3: Ritmo Cardíaco (alineado a la izquierda)
                               Align(
                                 alignment: Alignment.topLeft,
