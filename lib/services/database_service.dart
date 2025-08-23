@@ -1,6 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../models/tension_data.dart'; // Importa la clase que creaste
+import '../models/tension_data.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -47,12 +47,37 @@ class DatabaseService {
 
   Future<List<TensionData>> getTensionData() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('tension_data');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tension_data',
+      orderBy: 'fechaHora DESC',
+    ); // Ordenar por fecha descendente
 
     return List.generate(maps.length, (i) {
       return TensionData.fromMap(maps[i]);
     });
   }
 
-  // Agrega más métodos aquí para actualizar y eliminar datos si lo necesitas
+  // Nuevo método para obtener datos dentro de un rango de fechas
+  Future<List<TensionData>> getTensionDataByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tension_data',
+      where: 'fechaHora >= ? AND fechaHora <= ?',
+      whereArgs: [
+        startDate.toIso8601String(),
+        endDate
+            .add(const Duration(days: 1))
+            .subtract(const Duration(microseconds: 1))
+            .toIso8601String(), // Incluye hasta el final del día
+      ],
+      orderBy: 'fechaHora DESC', // Ordenar por fecha descendente
+    );
+
+    return List.generate(maps.length, (i) {
+      return TensionData.fromMap(maps[i]);
+    });
+  }
 }
