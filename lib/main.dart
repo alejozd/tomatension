@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 
-import 'pages/splash_page.dart'; // Tu página de bienvenida es el punto de entrada
+import 'package:flutter_localizations/flutter_localizations.dart'; // Importa los delegados de localización
+
+import 'pages/splash_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,8 +14,6 @@ void main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  // MyApp ya no necesita saber sobre migrationCompleted directamente al inicio.
-  // SplashPage se encargará de esa lógica.
   runApp(const MyApp());
 }
 
@@ -38,7 +38,20 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashPage(), // Siempre inicia en SplashPage
+      // --- Configuración de localización para español ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''), // Inglés
+        Locale('es', ''), // Español
+      ],
+      // Asegúrate de que tu dispositivo esté configurado en español para verlo reflejado,
+      // o puedes forzarlo con: locale: const Locale('es', ''), si es solo para pruebas.
+      // ---------------------------------------------------
+      home: const SplashPage(),
     );
   }
 }
