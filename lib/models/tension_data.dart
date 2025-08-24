@@ -118,7 +118,7 @@ class TensionData {
     }
 
     print(
-      'Datos finalizados para TensionData: Id=${rawId}, Sistole=$parsedSistole, Diastole=$parsedDiastole, RitmoCardiaco=$parsedRitmoCardiaco, FechaHora=$parsedFechaHora',
+      'Datos finalizados para TensionData: Id=$rawId, Sistole=$parsedSistole, Diastole=$parsedDiastole, RitmoCardiaco=$parsedRitmoCardiaco, FechaHora=$parsedFechaHora',
     );
     print('--- Fin creación TensionData ---');
 

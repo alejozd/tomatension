@@ -222,7 +222,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${DateFormat('dd/MM/yyyy').format(_selectedDateTime)}',
+                  DateFormat('dd/MM/yyyy').format(_selectedDateTime),
                   style: const TextStyle(fontSize: 16),
                 ),
                 AnimatedButton(
@@ -255,7 +255,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${DateFormat('hh:mm a').format(_selectedDateTime)}',
+                  DateFormat('hh:mm a').format(_selectedDateTime),
                   style: const TextStyle(fontSize: 16),
                 ),
                 AnimatedButton(
