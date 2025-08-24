@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Permisos para leer y escribir en almacenamiento externo (para la carpeta Download) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <!-- Si la app está dirigida a Android 13 (API 33) o superior y necesitas acceder a media files -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/> -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/> -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/> -->
     <application
         android:label="tomatension"
         android:name="${applicationName}"

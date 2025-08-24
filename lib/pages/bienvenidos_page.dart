@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart'; // Importa el paquete
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Importa SharedPreferences
+
 import 'tomar_tension_page.dart';
 import 'ver_datos_page.dart';
 import 'exportar_datos_page.dart';
+import 'migration_button_screen.dart'; // Importa la pantalla de migración
 import 'package:animated_button/animated_button.dart';
 
 class BienvenidosPage extends StatefulWidget {
-  // Cambiamos a StatefulWidget para manejar el estado de la versión
   const BienvenidosPage({super.key});
 
   @override
@@ -15,11 +17,13 @@ class BienvenidosPage extends StatefulWidget {
 
 class _BienvenidosPageState extends State<BienvenidosPage> {
   String _appVersion = '';
+  bool _migrationCompleted = true; // Asumimos completada hasta que se verifique
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
+    _checkMigrationStatus();
   }
 
   Future<void> _loadAppVersion() async {
@@ -27,6 +31,38 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
     setState(() {
       _appVersion = packageInfo.version;
     });
+  }
+
+  Future<void> _checkMigrationStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool completed = prefs.getBool('migration_completed') ?? false;
+    setState(() {
+      _migrationCompleted = completed;
+    });
+    print(
+      'BienvenidosPage: Estado de migración completada: $_migrationCompleted',
+    );
+  }
+
+  // Función para manejar la navegación a la pantalla de migración
+  Future<void> _navigateToMigrationScreen() async {
+    print('BienvenidosPage: Navegando a MigrationButtonScreen...');
+    // Usamos push y esperamos un resultado
+    final bool? migrationResult = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MigrationButtonScreen()),
+    );
+
+    // Si regresamos con 'true', significa que la migración se completó (o ya estaba hecha)
+    if (migrationResult == true) {
+      print(
+        'BienvenidosPage: Migración exitosa o ya completada. Actualizando estado.',
+      );
+      _checkMigrationStatus(); // Vuelve a verificar el estado para ocultar el botón
+      // Opcional: Podrías navegar a otra página o hacer un refresh de datos si fuera necesario
+    } else {
+      print('BienvenidosPage: Migración no completada o cancelada.');
+    }
   }
 
   @override
@@ -132,6 +168,31 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 15),
+
+            // --- NUEVO BOTÓN DE MIGRACIÓN (CONDICIONAL) ---
+            if (!_migrationCompleted) // Solo se muestra si la migración no está completada
+              AnimatedButton(
+                onPressed: _navigateToMigrationScreen,
+                width: 230,
+                height: 50,
+                color: Colors.purple, // Un color distintivo
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.cloud_upload, color: Colors.white),
+                    SizedBox(width: 10),
+                    Text(
+                      'Migrar Datos Antiguos',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 30),
             // Mostrar la versión de la aplicación
             Text(

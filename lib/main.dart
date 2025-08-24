@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
-import 'pages/splash_page.dart'; // Importa tu nueva SplashPage
 
-void main() {
+import 'pages/splash_page.dart'; // Tu página de bienvenida es el punto de entrada
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -11,6 +12,8 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   }
 
+  // MyApp ya no necesita saber sobre migrationCompleted directamente al inicio.
+  // SplashPage se encargará de esa lógica.
   runApp(const MyApp());
 }
 
@@ -35,7 +38,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashPage(), // Establece SplashPage como la pantalla inicial
+      home: const SplashPage(), // Siempre inicia en SplashPage
     );
   }
 }

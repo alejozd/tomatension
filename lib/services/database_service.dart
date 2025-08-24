@@ -3,43 +3,84 @@ import 'package:path/path.dart';
 import '../models/tension_data.dart';
 
 class DatabaseService {
-  static final DatabaseService _instance = DatabaseService._internal();
-  factory DatabaseService() => _instance;
-  DatabaseService._internal();
-
   static Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB();
+    _database = await _initDatabase();
     return _database!;
   }
 
-  Future<Database> _initDB() async {
-    final databasePath = await getDatabasesPath();
-    final path = join(databasePath, 'tension_data.db');
-
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE tension_data(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sistole INTEGER,
-            diastole INTEGER,
-            ritmoCardiaco INTEGER,
-            fechaHora TEXT
-          )
-        ''');
-      },
-    );
+  Future<Database> _initDatabase() async {
+    String path = await getDatabasesPath();
+    String dbPath = join(path, 'tension_data.db');
+    return await openDatabase(dbPath, version: 1, onCreate: _onCreate);
   }
 
-  Future<void> insertTensionData(TensionData data) async {
+  Future _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE TensionData(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sistole INTEGER,
+        diastole INTEGER,
+        ritmoCardiaco INTEGER,
+        fechaHora TEXT
+      )
+    ''');
+  }
+
+  Future<void> migrateDataFromExternalDb(String externalDbPath) async {
+    Database? externalDb;
+    try {
+      print('Intentando migrar datos desde: $externalDbPath');
+      externalDb = await openReadOnlyDatabase(externalDbPath);
+      print('Base de datos externa abierta exitosamente.');
+
+      final List<Map<String, dynamic>> xamarinRecords = await externalDb.query(
+        'TensionData',
+      );
+      print(
+        'Se encontraron ${xamarinRecords.length} registros en la base de datos externa.',
+      );
+
+      if (xamarinRecords.isNotEmpty) {
+        final db = await database;
+        await db.transaction((txn) async {
+          for (var record in xamarinRecords) {
+            try {
+              final tensionData = TensionData.fromMap(record);
+              await txn.insert(
+                'TensionData',
+                tensionData.toMap(),
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+              print(
+                'Registro migrado: ${tensionData.fechaHora} - ${tensionData.sistole}/${tensionData.diastole}',
+              );
+            } catch (e) {
+              print('ERROR al migrar un registro: $record. Error: $e');
+            }
+          }
+        });
+        print('Todos los registros migrados a la base de datos de Flutter.');
+      }
+    } catch (e) {
+      print(
+        'ERROR durante la migración de datos desde la base de datos externa: $e',
+      );
+      rethrow;
+    } finally {
+      if (externalDb != null && externalDb.isOpen) {
+        await externalDb.close();
+        print('Base de datos externa cerrada.');
+      }
+    }
+  }
+
+  Future<int> insertTensionData(TensionData data) async {
     final db = await database;
-    await db.insert(
-      'tension_data',
+    return await db.insert(
+      'TensionData',
       data.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -47,37 +88,51 @@ class DatabaseService {
 
   Future<List<TensionData>> getTensionData() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tension_data',
-      orderBy: 'fechaHora DESC',
-    ); // Ordenar por fecha descendente
-
+    final List<Map<String, dynamic>> maps = await db.query('TensionData');
     return List.generate(maps.length, (i) {
       return TensionData.fromMap(maps[i]);
     });
   }
 
-  // Nuevo método para obtener datos dentro de un rango de fechas
   Future<List<TensionData>> getTensionDataByDateRange(
     DateTime startDate,
     DateTime endDate,
   ) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tension_data',
-      where: 'fechaHora >= ? AND fechaHora <= ?',
-      whereArgs: [
-        startDate.toIso8601String(),
-        endDate
-            .add(const Duration(days: 1))
-            .subtract(const Duration(microseconds: 1))
-            .toIso8601String(), // Incluye hasta el final del día
-      ],
-      orderBy: 'fechaHora DESC', // Ordenar por fecha descendente
-    );
+    final String start = startDate.toIso8601String();
+    final String end = endDate.toIso8601String();
 
+    final List<Map<String, dynamic>> maps = await db.query(
+      'TensionData',
+      where: 'fechaHora BETWEEN ? AND ?',
+      whereArgs: [start, end],
+      orderBy: 'fechaHora ASC',
+    );
     return List.generate(maps.length, (i) {
       return TensionData.fromMap(maps[i]);
     });
+  }
+
+  Future<int> updateTensionData(TensionData data) async {
+    final db = await database;
+    return await db.update(
+      'TensionData',
+      data.toMap(),
+      where: 'id = ?',
+      whereArgs: [data.id],
+    );
+  }
+
+  Future<int> deleteTensionData(int id) async {
+    final db = await database;
+    return await db.delete('TensionData', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> getTensionDataCount() async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      'SELECT COUNT(*) FROM TensionData',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 }
