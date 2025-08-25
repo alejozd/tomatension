@@ -6,6 +6,7 @@ import 'tomar_tension_page.dart';
 import 'ver_datos_page.dart';
 import 'exportar_datos_page.dart';
 import 'migration_button_screen.dart'; // Importa la pantalla de migración
+import 'ver_grafico_page.dart';
 import 'package:animated_button/animated_button.dart';
 
 class BienvenidosPage extends StatefulWidget {
@@ -159,6 +160,38 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
                   SizedBox(width: 10),
                   Text(
                     'Exportar Datos',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            // --- NUEVO BOTÓN: Ver Gráfico ---
+            AnimatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const VerGraficoPage(), // Navega a la nueva página
+                  ),
+                );
+              },
+              width: 200,
+              height: 50,
+              color: Colors.orange, // Color distintivo para el gráfico
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.show_chart, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text(
+                    'Ver Gráfico',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,

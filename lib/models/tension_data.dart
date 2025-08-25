@@ -1,6 +1,3 @@
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-
 class TensionData {
   int? id; // El ID puede ser nulo antes de insertarse en la base de datos
   int sistole;
