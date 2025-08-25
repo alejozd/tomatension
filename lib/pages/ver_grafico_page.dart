@@ -309,7 +309,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
         border: Border.all(color: const Color(0xff37434d), width: 1),
       ),
       minX: 0,
-      maxX: (_tensionData.length > 0 ? _tensionData.length - 1 : 0).toDouble(),
+      maxX: (_tensionData.isNotEmpty ? _tensionData.length - 1 : 0).toDouble(),
       minY: minY,
       maxY: maxY,
       lineBarsData: [
