@@ -27,6 +27,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
     _fetchData();
   }
 
+  // Carga los datos de tensión arterial para el rango de fechas seleccionado
   Future<void> _fetchData() async {
     setState(() {
       _isLoading = true;
@@ -49,6 +50,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
     }
   }
 
+  // Abre el selector de fecha para la fecha de inicio
   Future<void> _selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -60,25 +62,28 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
       setState(() {
         _selectedStartDate = picked;
         if (_selectedStartDate.isAfter(_selectedEndDate)) {
-          _selectedEndDate = _selectedStartDate;
+          _selectedEndDate =
+              _selectedStartDate; // Ajusta la fecha final si la inicial es posterior
         }
       });
-      _fetchData();
+      _fetchData(); // <-- Vuelve a buscar y generar la gráfica
     }
   }
 
+  // Abre el selector de fecha para la fecha de fin
   Future<void> _selectEndDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedEndDate,
-      firstDate: _selectedStartDate,
+      firstDate:
+          _selectedStartDate, // La fecha final no puede ser anterior a la inicial
       lastDate: DateTime.now(),
     );
     if (picked != null && picked != _selectedEndDate) {
       setState(() {
         _selectedEndDate = picked;
       });
-      _fetchData();
+      _fetchData(); // <-- Vuelve a buscar y generar la gráfica
     }
   }
 
@@ -94,28 +99,74 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Selectores de fecha - Usamos Flexible para que no sean demasiado anchos
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(8.0), // Padding reducido
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _selectStartDate(context),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(
-                          'Inicio: ${DateFormat('dd/MM/yyyy').format(_selectedStartDate)}',
+                      Expanded(
+                        // <--- Usa Expanded
+                        child: ElevatedButton.icon(
+                          onPressed: () => _selectStartDate(context),
+                          icon: const Icon(
+                            Icons.calendar_today,
+                            size: 18,
+                          ), // Icono más pequeño
+                          label: FittedBox(
+                            // <--- Usa FittedBox para ajustar el texto
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Inicio: ${DateFormat('dd/MM/yyyy').format(_selectedStartDate)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                              ), // Texto más pequeño
+                            ),
+                          ),
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => _selectEndDate(context),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(
-                          'Fin: ${DateFormat('dd/MM/yyyy').format(_selectedEndDate)}',
+                      const SizedBox(width: 8), // Espacio entre los botones
+                      Expanded(
+                        // <--- Usa Expanded
+                        child: ElevatedButton.icon(
+                          onPressed: () => _selectEndDate(context),
+                          icon: const Icon(
+                            Icons.calendar_today,
+                            size: 18,
+                          ), // Icono más pequeño
+                          label: FittedBox(
+                            // <--- Usa FittedBox para ajustar el texto
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Fin: ${DateFormat('dd/MM/yyyy').format(_selectedEndDate)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                              ), // Texto más pequeño
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+                // Leyenda del gráfico
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildLegendItem(Colors.blueAccent, 'Sístole'),
+                      const SizedBox(width: 16),
+                      _buildLegendItem(Colors.green, 'Diástole'),
+                      const SizedBox(width: 16),
+                      _buildLegendItem(Colors.redAccent, 'Ritmo Cardíaco'),
+                    ],
+                  ),
+                ),
+                // Contenedor del gráfico
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -138,6 +189,25 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
     );
   }
 
+  // Widget para construir cada elemento de la leyenda
+  Widget _buildLegendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+
+  // Configuración de los datos del gráfico
   LineChartData mainData() {
     final List<FlSpot> sistoleSpots = [];
     final List<FlSpot> diastoleSpots = [];
@@ -237,7 +307,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
         border: Border.all(color: const Color(0xff37434d), width: 1),
       ),
       minX: 0,
-      maxX: (_tensionData.isNotEmpty ? _tensionData.length - 1 : 0).toDouble(),
+      maxX: (_tensionData.length > 0 ? _tensionData.length - 1 : 0).toDouble(),
       minY: minY,
       maxY: maxY,
       lineBarsData: [
@@ -276,13 +346,10 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
           tooltipRoundedRadius: 8.0,
           getTooltipItems: (touchedSpots) {
             return touchedSpots.map((LineBarSpot touchedSpot) {
-              // --- CAMBIO CLAVE AQUÍ ---
-              // touchedSpot ya es el FlSpot o permite acceder a sus propiedades directamente.
               if (touchedSpot.x < 0 || touchedSpot.x >= _tensionData.length) {
                 return null;
               }
               final dataPoint = _tensionData[touchedSpot.x.toInt()];
-              // ------------------------
               return LineTooltipItem(
                 '${DateFormat('dd/MM/yy HH:mm').format(dataPoint.fechaHora)}\n'
                 'Sistole: ${dataPoint.sistole}\n'
