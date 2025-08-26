@@ -94,12 +94,11 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Selectores de fecha - Usamos Flexible para que no sean demasiado anchos
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 4.0,
                     vertical: 8.0,
-                  ), // <--- Padding horizontal reducido
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -118,13 +117,11 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
                             padding: const EdgeInsets.symmetric(
                               horizontal: 4,
                               vertical: 10,
-                            ), // <--- Padding interno del botón
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(
-                        width: 4,
-                      ), // <--- Espacio entre los botones reducido
+                      const SizedBox(width: 4),
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () => _selectEndDate(context),
@@ -140,31 +137,29 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
                             padding: const EdgeInsets.symmetric(
                               horizontal: 4,
                               vertical: 10,
-                            ), // <--- Padding interno del botón
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Leyenda del gráfico
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12.0,
                     vertical: 8.0,
-                  ), // <--- Padding horizontal reducido
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _buildLegendItem(Colors.blueAccent, 'Sístole'),
-                      const SizedBox(width: 12), // <--- Espacio reducido
+                      const SizedBox(width: 12),
                       _buildLegendItem(Colors.green, 'Diástole'),
-                      const SizedBox(width: 12), // <--- Espacio reducido
+                      const SizedBox(width: 12),
                       _buildLegendItem(Colors.redAccent, 'Ritmo Cardíaco'),
                     ],
                   ),
                 ),
-                // Contenedor del gráfico
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(
@@ -172,7 +167,8 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
                       right: 16.0,
                       top: 16.0,
                       bottom: 16.0,
-                    ), // <--- Padding del gráfico ajustado
+                    ),
+                    // <--- AÑADIDO: SingleChildScrollView para scroll horizontal
                     child: _tensionData.isEmpty
                         ? const Center(
                             child: Text(
@@ -184,7 +180,16 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
                               textAlign: TextAlign.center,
                             ),
                           )
-                        : LineChart(mainData()),
+                        : SingleChildScrollView(
+                            // Permite el scroll horizontal
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              // Contenedor con ancho calculado para el gráfico
+                              width:
+                                  _calculateChartWidth(), // <--- Ancho dinámico
+                              child: LineChart(mainData()),
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -208,6 +213,23 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
       ],
     );
   }
+
+  // <--- NUEVA FUNCIÓN: Calcular el ancho del gráfico dinámicamente
+  double _calculateChartWidth() {
+    final double baseWidth =
+        MediaQuery.of(context).size.width -
+        10.0 -
+        16.0; // Ancho de la pantalla - padding horizontal
+    // Cada punto de datos necesita un mínimo de espacio.
+    // Si tenemos muchos puntos, expandimos el ancho.
+    final double minPointWidth =
+        40.0; // Ancho mínimo deseado por cada punto de datos
+    return (_tensionData.length * minPointWidth).clamp(
+      baseWidth,
+      double.infinity,
+    );
+  }
+  // -------------------------------------------------------------
 
   LineChartData mainData() {
     final List<FlSpot> sistoleSpots = [];
@@ -293,7 +315,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize:
-                40, // Mantener o ajustar si el padding aún no es suficiente
+                40, // <--- Ajustado el reservedSize para que los números no se corten
             interval: 20,
             getTitlesWidget: (value, meta) {
               return Text(
@@ -309,7 +331,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
         border: Border.all(color: const Color(0xff37434d), width: 1),
       ),
       minX: 0,
-      maxX: (_tensionData.isNotEmpty ? _tensionData.length - 1 : 0).toDouble(),
+      maxX: (_tensionData.length > 0 ? _tensionData.length - 1 : 0).toDouble(),
       minY: minY,
       maxY: maxY,
       lineBarsData: [
