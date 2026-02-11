@@ -99,13 +99,26 @@ class DatabaseService {
     DateTime endDate,
   ) async {
     final db = await database;
-    final String start = startDate.toIso8601String();
-    final String end = endDate.toIso8601String();
+    final DateTime startOfDay = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
+    final DateTime endOfDay = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      23,
+      59,
+      59,
+      999,
+      999,
+    );
 
     final List<Map<String, dynamic>> maps = await db.query(
       'TensionData',
       where: 'fechaHora BETWEEN ? AND ?',
-      whereArgs: [start, end],
+      whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
       orderBy: 'fechaHora ASC',
     );
     return List.generate(maps.length, (i) {

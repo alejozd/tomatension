@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:animated_button/animated_button.dart';
 import 'package:progress_state_button/progress_button.dart';
@@ -46,25 +47,28 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
   }
 
   void _validateForm() {
-    final sistoleText = _sistoleController.text.trim();
-    final diastoleText = _diastoleController.text.trim();
-    final ritmoCardiacoText = _ritmoCardiacoController.text.trim();
+    final int? sistole = int.tryParse(_sistoleController.text.trim());
+    final int? diastole = int.tryParse(_diastoleController.text.trim());
+    final int? ritmo = int.tryParse(_ritmoCardiacoController.text.trim());
 
-    final isValid =
-        sistoleText.isNotEmpty &&
-        diastoleText.isNotEmpty &&
-        ritmoCardiacoText.isNotEmpty;
+    final bool isValid =
+        sistole != null &&
+        diastole != null &&
+        ritmo != null &&
+        sistole >= 60 &&
+        sistole <= 260 &&
+        diastole >= 40 &&
+        diastole <= 180 &&
+        ritmo >= 30 &&
+        ritmo <= 220;
 
     if (_isFormValid != isValid) {
       setState(() {
         _isFormValid = isValid;
-        // Si el formulario deja de ser válido mientras el botón está en idle,
-        // nos aseguramos de que el estado visual refleje "deshabilitado".
         if (!_isFormValid && _buttonState == ButtonState.idle) {
-          _buttonState =
-              ButtonState.fail; // Usamos fail para el look deshabilitado
+          _buttonState = ButtonState.fail;
         } else if (_isFormValid && _buttonState == ButtonState.fail) {
-          _buttonState = ButtonState.idle; // Volvemos a idle si es válido
+          _buttonState = ButtonState.idle;
         }
       });
     }
@@ -281,20 +285,50 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
 
             TextField(
               controller: _sistoleController,
-              decoration: const InputDecoration(labelText: 'Sístole'),
+              decoration: InputDecoration(
+                labelText: 'Sístole',
+                helperText: 'Rango recomendado: 60-260',
+                errorText: _sistoleController.text.trim().isNotEmpty &&
+                        (int.tryParse(_sistoleController.text.trim()) == null ||
+                            (int.tryParse(_sistoleController.text.trim()) ?? 0) < 60 ||
+                            (int.tryParse(_sistoleController.text.trim()) ?? 0) > 260)
+                    ? 'Valor no válido'
+                    : null,
+              ),
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _diastoleController,
-              decoration: const InputDecoration(labelText: 'Diástole'),
+              decoration: InputDecoration(
+                labelText: 'Diástole',
+                helperText: 'Rango recomendado: 40-180',
+                errorText: _diastoleController.text.trim().isNotEmpty &&
+                        (int.tryParse(_diastoleController.text.trim()) == null ||
+                            (int.tryParse(_diastoleController.text.trim()) ?? 0) < 40 ||
+                            (int.tryParse(_diastoleController.text.trim()) ?? 0) > 180)
+                    ? 'Valor no válido'
+                    : null,
+              ),
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _ritmoCardiacoController,
-              decoration: const InputDecoration(labelText: 'Ritmo Cardíaco'),
+              decoration: InputDecoration(
+                labelText: 'Ritmo Cardíaco',
+                helperText: 'Rango recomendado: 30-220',
+                errorText: _ritmoCardiacoController.text.trim().isNotEmpty &&
+                        (int.tryParse(_ritmoCardiacoController.text.trim()) == null ||
+                            (int.tryParse(_ritmoCardiacoController.text.trim()) ?? 0) < 30 ||
+                            (int.tryParse(_ritmoCardiacoController.text.trim()) ?? 0) > 220)
+                    ? 'Valor no válido'
+                    : null,
+              ),
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 30),
 
