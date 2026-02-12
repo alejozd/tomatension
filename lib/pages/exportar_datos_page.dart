@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:animated_button/animated_button.dart';
 import 'package:excel/excel.dart' as xls;
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,62 +26,61 @@ class ExportarDatosPage extends StatelessWidget {
     return '$databasePath/tension_data.db';
   }
 
-  Future<String> _getDefaultBackupFilePath() async {
+  Future<Directory> _getBackupsDirectory() async {
     final directory = await getApplicationDocumentsDirectory();
     final backupsDir = Directory('${directory.path}/backups');
     if (!await backupsDir.exists()) {
       await backupsDir.create(recursive: true);
     }
-    return '${backupsDir.path}/tension_data_backup.db';
+    return backupsDir;
   }
 
-  Future<String?> _pickBackupDestinationPath() async {
-    final String defaultPath = await _getDefaultBackupFilePath();
-    final selectedPath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Guardar backup local',
-      fileName: 'tension_data_backup.db',
-      initialDirectory: File(defaultPath).parent.path,
-      type: FileType.custom,
-      allowedExtensions: ['db'],
-    );
+  Future<File?> _pickLocalBackupFile(BuildContext context) async {
+    final backupsDir = await _getBackupsDirectory();
+    final files = backupsDir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.toLowerCase().endsWith('.db'))
+        .toList()
+      ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
 
-    if (selectedPath == null || selectedPath.trim().isEmpty) {
+    if (files.isEmpty) {
       return null;
     }
 
-    if (selectedPath.toLowerCase().endsWith('.db')) {
-      return selectedPath;
-    }
-
-    return '$selectedPath.db';
-  }
-
-  Future<File?> _pickBackupFileToRestore() async {
-    final result = await FilePicker.platform.pickFiles(
-      dialogTitle: 'Selecciona archivo de backup',
-      type: FileType.custom,
-      allowedExtensions: ['db', 'sqlite', 'backup', 'bak'],
-      allowMultiple: false,
+    return showDialog<File>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Selecciona un backup local'),
+        content: SizedBox(
+          width: 320,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: files.length,
+            itemBuilder: (context, index) {
+              final file = files[index];
+              return ListTile(
+                title: Text(file.uri.pathSegments.last),
+                subtitle: Text(file.path),
+                onTap: () => Navigator.pop(context, file),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        ],
+      ),
     );
-
-    final selectedPath = result?.files.single.path;
-    if (selectedPath == null || selectedPath.trim().isEmpty) {
-      return null;
-    }
-
-    return File(selectedPath);
   }
 
   Future<void> _backupLocal(BuildContext context) async {
     try {
       final sourcePath = await _getDatabaseFilePath();
-      final destinationPath = await _pickBackupDestinationPath();
+      final backupsDir = await _getBackupsDirectory();
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final destinationPath = '${backupsDir.path}/tension_data_backup_$timestamp.db';
       final dbFile = File(sourcePath);
-
-      if (destinationPath == null) {
-        _showMessage(context, 'Backup cancelado.');
-        return;
-      }
 
       if (!await dbFile.exists()) {
         _showMessage(context, 'No se encontró la base de datos para crear backup.');
@@ -104,9 +102,9 @@ class ExportarDatosPage extends StatelessWidget {
 
   Future<void> _restoreLocal(BuildContext context) async {
     try {
-      final backupFile = await _pickBackupFileToRestore();
+      final backupFile = await _pickLocalBackupFile(context);
       if (backupFile == null) {
-        _showMessage(context, 'Restauración cancelada.');
+        _showMessage(context, 'No hay backups locales disponibles o restauración cancelada.');
         return;
       }
 
@@ -280,7 +278,7 @@ class ExportarDatosPage extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: const Text(
-                  'Los backups son copias del archivo SQLite (.db) de la app. Ahora puedes elegir dónde guardarlo y qué archivo seleccionar al restaurar.',
+                  'Los backups son copias del archivo SQLite (.db) de la app y se guardan en la carpeta local de backups. Al restaurar podrás elegir uno de los backups locales detectados.',
                   style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
                   textAlign: TextAlign.center,
                 ),
@@ -307,7 +305,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.deepPurple,
                 icon: Icons.backup,
                 title: 'Crear Backup Local',
-                subtitle: 'Te pedirá carpeta/archivo destino (.db)',
+                subtitle: 'Guarda en carpeta local backups/ con fecha',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -315,7 +313,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.orange,
                 icon: Icons.settings_backup_restore,
                 title: 'Restaurar Backup Local',
-                subtitle: 'Te pedirá seleccionar un archivo backup',
+                subtitle: 'Te permitirá elegir entre backups locales',
               ),
             ],
           ),

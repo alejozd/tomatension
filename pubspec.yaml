@@ -47,7 +47,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   fl_chart: ^0.68.0  
-  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:
