@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Importa SharedPreferences
 
+import 'exportar_datos_page.dart';
 import 'tomar_tension_page.dart';
 import 'ver_datos_page.dart';
-import 'exportar_datos_page.dart';
-import 'migration_button_screen.dart'; // Importa la pantalla de migración
 import 'ver_grafico_page.dart';
-import 'package:animated_button/animated_button.dart';
 
 class BienvenidosPage extends StatefulWidget {
   const BienvenidosPage({super.key});
@@ -18,13 +15,11 @@ class BienvenidosPage extends StatefulWidget {
 
 class _BienvenidosPageState extends State<BienvenidosPage> {
   String _appVersion = '';
-  bool _migrationCompleted = true; // Asumimos completada hasta que se verifique
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
-    _checkMigrationStatus();
   }
 
   Future<void> _loadAppVersion() async {
@@ -34,203 +29,148 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
     });
   }
 
-  Future<void> _checkMigrationStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool completed = prefs.getBool('migration_completed') ?? false;
-    setState(() {
-      _migrationCompleted = completed;
-    });
-    print(
-      'BienvenidosPage: Estado de migración completada: $_migrationCompleted',
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          boxShadow: const [
+            BoxShadow(color: Color(0x220F172A), blurRadius: 10, offset: Offset(0, 5)),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: Colors.white, size: 28),
+              const Spacer(),
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
-  }
-
-  // Función para manejar la navegación a la pantalla de migración
-  Future<void> _navigateToMigrationScreen() async {
-    print('BienvenidosPage: Navegando a MigrationButtonScreen...');
-    // Usamos push y esperamos un resultado
-    final bool? migrationResult = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MigrationButtonScreen()),
-    );
-
-    // Si regresamos con 'true', significa que la migración se completó (o ya estaba hecha)
-    if (migrationResult == true) {
-      print(
-        'BienvenidosPage: Migración exitosa o ya completada. Actualizando estado.',
-      );
-      _checkMigrationStatus(); // Vuelve a verificar el estado para ocultar el botón
-      // Opcional: Podrías navegar a otra página o hacer un refresh de datos si fuera necesario
-    } else {
-      print('BienvenidosPage: Migración no completada o cancelada.');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Toma Tensión')),
-      body: Center(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('Toma Tensión'),
+        backgroundColor: const Color(0xFF4F46E5),
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              '¡Bienvenido!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 30),
-
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TomarTensionPage(),
-                  ),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.blueAccent,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.add, color: Colors.white),
-                  SizedBox(width: 10),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    'Ingresar Datos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    '¡Bienvenido!',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Elige una opción para registrar, consultar, analizar o respaldar tus datos.',
+                    style: TextStyle(color: Color(0xFF64748B)),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 15),
-
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const VerDatosPage()),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.green,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 15.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: const [
-                    Icon(Icons.visibility, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      'Ver Datos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ExportarDatosPage(),
+            const SizedBox(height: 14),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.08,
+                children: [
+                  _menuTile(
+                    icon: Icons.add,
+                    title: 'Ingresar',
+                    subtitle: 'Registrar medición',
+                    gradient: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const TomarTensionPage()),
+                      );
+                    },
                   ),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.redAccent,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.share, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text(
-                    'Exportar Datos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  _menuTile(
+                    icon: Icons.list_alt,
+                    title: 'Ver datos',
+                    subtitle: 'Historial filtrable',
+                    gradient: const [Color(0xFF16A34A), Color(0xFF15803D)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const VerDatosPage()),
+                      );
+                    },
+                  ),
+                  _menuTile(
+                    icon: Icons.show_chart,
+                    title: 'Gráfico',
+                    subtitle: 'Tendencias y promedios',
+                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const VerGraficoPage()),
+                      );
+                    },
+                  ),
+                  _menuTile(
+                    icon: Icons.backup,
+                    title: 'Backup',
+                    subtitle: 'Exportar y restaurar',
+                    gradient: const [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ExportarDatosPage()),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 15),
-
-            // --- NUEVO BOTÓN: Ver Gráfico ---
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const VerGraficoPage(), // Navega a la nueva página
-                  ),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.orange, // Color distintivo para el gráfico
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.show_chart, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text(
-                    'Ver Gráfico',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            Center(
+              child: Text(
+                'Versión: $_appVersion',
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
-            ),
-            const SizedBox(height: 15),
-
-            // --- NUEVO BOTÓN DE MIGRACIÓN (CONDICIONAL) ---
-            if (!_migrationCompleted) // Solo se muestra si la migración no está completada
-              AnimatedButton(
-                onPressed: _navigateToMigrationScreen,
-                width: 230,
-                height: 50,
-                color: Colors.purple, // Un color distintivo
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.cloud_upload, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      'Migrar Datos Antiguos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 30),
-            // Mostrar la versión de la aplicación
-            Text(
-              'Versión: $_appVersion',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
