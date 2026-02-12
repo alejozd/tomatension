@@ -1,12 +1,13 @@
 import 'dart:io';
 
 import 'package:animated_button/animated_button.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' as xls;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../models/tension_data.dart';
 import '../services/database_service.dart';
@@ -175,7 +176,7 @@ class ExportarDatosPage extends StatelessWidget {
       }
 
       final sortedData = [...datos]..sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
-      final excel = Excel.createExcel();
+      final excel = xls.Excel.createExcel();
       final String sheetName = excel.getDefaultSheet() ?? 'Sheet1';
       final sheet = excel.sheets[sheetName];
 
@@ -184,19 +185,19 @@ class ExportarDatosPage extends StatelessWidget {
         return;
       }
 
-      sheet.cell(CellIndex.indexByString('A1')).value = TextCellValue('Fecha y hora');
-      sheet.cell(CellIndex.indexByString('B1')).value = TextCellValue('Sístole');
-      sheet.cell(CellIndex.indexByString('C1')).value = TextCellValue('Diástole');
-      sheet.cell(CellIndex.indexByString('D1')).value = TextCellValue('Ritmo cardíaco');
+      sheet.cell(xls.CellIndex.indexByString('A1')).value = xls.TextCellValue('Fecha y hora');
+      sheet.cell(xls.CellIndex.indexByString('B1')).value = xls.TextCellValue('Sístole');
+      sheet.cell(xls.CellIndex.indexByString('C1')).value = xls.TextCellValue('Diástole');
+      sheet.cell(xls.CellIndex.indexByString('D1')).value = xls.TextCellValue('Ritmo cardíaco');
 
       final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
       for (int i = 0; i < sortedData.length; i++) {
         final row = i + 2;
         final item = sortedData[i];
-        sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(dateFormat.format(item.fechaHora));
-        sheet.cell(CellIndex.indexByString('B$row')).value = IntCellValue(item.sistole);
-        sheet.cell(CellIndex.indexByString('C$row')).value = IntCellValue(item.diastole);
-        sheet.cell(CellIndex.indexByString('D$row')).value = IntCellValue(item.ritmoCardiaco);
+        sheet.cell(xls.CellIndex.indexByString('A$row')).value = xls.TextCellValue(dateFormat.format(item.fechaHora));
+        sheet.cell(xls.CellIndex.indexByString('B$row')).value = xls.IntCellValue(item.sistole);
+        sheet.cell(xls.CellIndex.indexByString('C$row')).value = xls.IntCellValue(item.diastole);
+        sheet.cell(xls.CellIndex.indexByString('D$row')).value = xls.IntCellValue(item.ritmoCardiaco);
       }
 
       final excelBytes = excel.encode();
