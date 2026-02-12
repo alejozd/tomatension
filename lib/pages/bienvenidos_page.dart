@@ -1,4 +1,3 @@
-import 'package:animated_button/animated_button.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -30,31 +29,68 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
     });
   }
 
-  Widget _menuButton({
-    required Color color,
+  Widget _menuCard({
     required IconData icon,
     required String title,
-    required VoidCallback onPressed,
+    required String subtitle,
+    required List<Color> gradient,
+    required VoidCallback onTap,
   }) {
-    return AnimatedButton(
-      onPressed: onPressed,
-      width: 260,
-      height: 56,
-      color: color,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Ink(
+        width: 320,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: gradient),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 12,
+              offset: Offset(0, 5),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.white),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Color(0xFFE2E8F0),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+          ],
+        ),
       ),
     );
   }
@@ -72,15 +108,14 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Container(
                 width: 320,
                 padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFD8E8FF)),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: const Column(
                   children: [
@@ -92,19 +127,20 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Selecciona una opción para gestionar tus mediciones.',
+                      'Accede rápidamente a cada sección desde este panel.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFF475569)),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              _menuButton(
-                color: Colors.blueAccent,
-                icon: Icons.add,
+              const SizedBox(height: 20),
+              _menuCard(
+                icon: Icons.add_chart,
                 title: 'Ingresar Datos',
-                onPressed: () {
+                subtitle: 'Registrar una nueva medición',
+                gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const TomarTensionPage()),
@@ -112,11 +148,12 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
                 },
               ),
               const SizedBox(height: 12),
-              _menuButton(
-                color: Colors.green,
-                icon: Icons.visibility,
+              _menuCard(
+                icon: Icons.fact_check,
                 title: 'Ver Datos',
-                onPressed: () {
+                subtitle: 'Consultar historial de mediciones',
+                gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const VerDatosPage()),
@@ -124,11 +161,12 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
                 },
               ),
               const SizedBox(height: 12),
-              _menuButton(
-                color: Colors.redAccent,
-                icon: Icons.share,
+              _menuCard(
+                icon: Icons.backup,
                 title: 'Exportar / Backup',
-                onPressed: () {
+                subtitle: 'Compartir, respaldar y restaurar datos',
+                gradient: const [Color(0xFFF43F5E), Color(0xFFE11D48)],
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const ExportarDatosPage()),
@@ -136,18 +174,19 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
                 },
               ),
               const SizedBox(height: 12),
-              _menuButton(
-                color: Colors.orange,
+              _menuCard(
                 icon: Icons.show_chart,
                 title: 'Ver Gráfico',
-                onPressed: () {
+                subtitle: 'Visualizar tendencias y evolución',
+                gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const VerGraficoPage()),
                   );
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Text(
                 'Versión: $_appVersion',
                 style: const TextStyle(fontSize: 14, color: Colors.grey),

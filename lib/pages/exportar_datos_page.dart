@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:animated_button/animated_button.dart';
 import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:sqflite/sqflite.dart';
 
 import '../models/tension_data.dart';
 import '../services/database_service.dart';
@@ -26,7 +26,7 @@ class ExportarDatosPage extends StatelessWidget {
     return '$databasePath/tension_data.db';
   }
 
-  Future<String> _getLocalBackupFilePath() async {
+  Future<String> _getDefaultBackupFilePath() async {
     final directory = await getApplicationDocumentsDirectory();
     final backupsDir = Directory('${directory.path}/backups');
     if (!await backupsDir.exists()) {
@@ -35,19 +35,67 @@ class ExportarDatosPage extends StatelessWidget {
     return '${backupsDir.path}/tension_data_backup.db';
   }
 
+  Future<String?> _pickBackupDestinationPath() async {
+    final String defaultPath = await _getDefaultBackupFilePath();
+    final selectedPath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Guardar backup local',
+      fileName: 'tension_data_backup.db',
+      initialDirectory: File(defaultPath).parent.path,
+      type: FileType.custom,
+      allowedExtensions: ['db'],
+    );
+
+    if (selectedPath == null || selectedPath.trim().isEmpty) {
+      return null;
+    }
+
+    if (selectedPath.toLowerCase().endsWith('.db')) {
+      return selectedPath;
+    }
+
+    return '$selectedPath.db';
+  }
+
+  Future<File?> _pickBackupFileToRestore() async {
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Selecciona archivo de backup',
+      type: FileType.custom,
+      allowedExtensions: ['db', 'sqlite', 'backup', 'bak'],
+      allowMultiple: false,
+    );
+
+    final selectedPath = result?.files.single.path;
+    if (selectedPath == null || selectedPath.trim().isEmpty) {
+      return null;
+    }
+
+    return File(selectedPath);
+  }
+
   Future<void> _backupLocal(BuildContext context) async {
     try {
       final sourcePath = await _getDatabaseFilePath();
-      final backupPath = await _getLocalBackupFilePath();
+      final destinationPath = await _pickBackupDestinationPath();
       final dbFile = File(sourcePath);
+
+      if (destinationPath == null) {
+        _showMessage(context, 'Backup cancelado.');
+        return;
+      }
 
       if (!await dbFile.exists()) {
         _showMessage(context, 'No se encontró la base de datos para crear backup.');
         return;
       }
 
-      await dbFile.copy(backupPath);
-      _showMessage(context, 'Backup local creado en: $backupPath');
+      final destinationFile = File(destinationPath);
+      final parentDir = destinationFile.parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
+      }
+
+      await dbFile.copy(destinationPath);
+      _showMessage(context, 'Backup local creado en: $destinationPath');
     } catch (e) {
       _showMessage(context, 'Error al crear backup local: $e');
     }
@@ -55,10 +103,14 @@ class ExportarDatosPage extends StatelessWidget {
 
   Future<void> _restoreLocal(BuildContext context) async {
     try {
-      final backupPath = await _getLocalBackupFilePath();
-      final backupFile = File(backupPath);
+      final backupFile = await _pickBackupFileToRestore();
+      if (backupFile == null) {
+        _showMessage(context, 'Restauración cancelada.');
+        return;
+      }
+
       if (!await backupFile.exists()) {
-        _showMessage(context, 'No existe un backup local para restaurar.');
+        _showMessage(context, 'El archivo seleccionado no existe o no es accesible.');
         return;
       }
 
@@ -66,8 +118,8 @@ class ExportarDatosPage extends StatelessWidget {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Restaurar backup'),
-          content: const Text(
-            'Esta acción reemplazará los datos actuales por los del backup local. ¿Deseas continuar?',
+          content: Text(
+            'Se reemplazarán los datos actuales con el contenido de:\n${backupFile.path}\n\n¿Deseas continuar?',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
@@ -84,8 +136,7 @@ class ExportarDatosPage extends StatelessWidget {
       await dbService.closeDatabase();
 
       final destinationPath = await _getDatabaseFilePath();
-      final destinationFile = File(destinationPath);
-      await backupFile.copy(destinationFile.path);
+      await backupFile.copy(destinationPath);
 
       _showMessage(context, 'Backup restaurado correctamente.');
     } catch (e) {
@@ -171,23 +222,37 @@ class ExportarDatosPage extends StatelessWidget {
     required Color color,
     required IconData icon,
     required String title,
+    String? subtitle,
   }) {
     return AnimatedButton(
       onPressed: onPressed,
-      width: 280,
-      height: 52,
+      width: 300,
+      height: 60,
       color: color,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: Colors.white),
           const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFFE2E8F0)),
+                  ),
+              ],
             ),
           ),
         ],
@@ -205,17 +270,27 @@ class ExportarDatosPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              const Text(
-                'Exporta, crea respaldo local o restaura tu información',
-                style: TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
+              Container(
+                width: 320,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Text(
+                  'Los backups son copias del archivo SQLite (.db) de la app. Ahora puedes elegir dónde guardarlo y qué archivo seleccionar al restaurar.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               _actionButton(
                 onPressed: () => _exportDatabase(context),
                 color: Colors.lightBlue,
                 icon: Icons.storage,
                 title: 'Compartir Base de Datos',
+                subtitle: 'Envía una copia por apps compatibles',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -223,6 +298,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.teal,
                 icon: Icons.insert_drive_file,
                 title: 'Compartir Archivo Excel',
+                subtitle: 'Genera un .xlsx con todas tus mediciones',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -230,6 +306,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.deepPurple,
                 icon: Icons.backup,
                 title: 'Crear Backup Local',
+                subtitle: 'Te pedirá carpeta/archivo destino (.db)',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -237,6 +314,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.orange,
                 icon: Icons.settings_backup_restore,
                 title: 'Restaurar Backup Local',
+                subtitle: 'Te pedirá seleccionar un archivo backup',
               ),
             ],
           ),
