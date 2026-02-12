@@ -430,13 +430,21 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
           tooltipRoundedRadius: 10,
           getTooltipColor: (_) => const Color(0xFF0F172A).withOpacity(0.92),
           getTooltipItems: (spots) {
-            return spots.map((spot) {
-              final index = spot.x.toInt();
-              if (index < 0 || index >= _tensionData.length) {
+            if (spots.isEmpty) {
+              return [];
+            }
+
+            final int index = spots.first.x.toInt();
+            if (index < 0 || index >= _tensionData.length) {
+              return spots.map((_) => null).toList();
+            }
+
+            final item = _tensionData[index];
+            return List.generate(spots.length, (tooltipIndex) {
+              if (tooltipIndex != 0) {
                 return null;
               }
 
-              final item = _tensionData[index];
               return LineTooltipItem(
                 '${DateFormat('dd/MM/yy HH:mm').format(item.fechaHora)}\n'
                 'Sístole: ${item.sistole}\n'
@@ -444,7 +452,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
                 'Ritmo: ${item.ritmoCardiaco}',
                 const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
               );
-            }).toList();
+            });
           },
         ),
       ),
