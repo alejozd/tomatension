@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:animated_button/animated_button.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' as xls;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,19 +26,109 @@ class ExportarDatosPage extends StatelessWidget {
     return '$databasePath/tension_data.db';
   }
 
-  Future<String> _getLocalBackupFilePath() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final backupsDir = Directory('${directory.path}/backups');
-    if (!await backupsDir.exists()) {
-      await backupsDir.create(recursive: true);
+  Future<List<Directory>> _getCandidateBackupDirectories() async {
+    final List<Directory> dirs = [];
+
+    final appDocuments = await getApplicationDocumentsDirectory();
+    dirs.add(Directory('${appDocuments.path}/backups'));
+
+    if (Platform.isAndroid) {
+      dirs.add(Directory('/storage/emulated/0/Download/TomaTensionBackups'));
+      dirs.add(Directory('/storage/emulated/0/Documents/TomaTensionBackups'));
     }
-    return '${backupsDir.path}/tension_data_backup.db';
+
+    return dirs;
+  }
+
+  Future<Directory> _getPreferredBackupDirectory() async {
+    final candidates = await _getCandidateBackupDirectories();
+
+    for (final dir in candidates) {
+      try {
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        return dir;
+      } catch (_) {
+        continue;
+      }
+    }
+
+    throw Exception('No se pudo preparar ninguna carpeta de backup.');
+  }
+
+  Future<List<(File, String)>> _getAvailableBackupFiles() async {
+    final files = <(File, String)>[];
+    final seenPaths = <String>{};
+    final candidates = await _getCandidateBackupDirectories();
+
+    for (final dir in candidates) {
+      try {
+        if (!await dir.exists()) {
+          continue;
+        }
+
+        final sourceLabel = dir.path;
+        final dirFiles = dir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.toLowerCase().endsWith('.db'))
+            .toList();
+
+        for (final file in dirFiles) {
+          if (seenPaths.add(file.path)) {
+            files.add((file, sourceLabel));
+          }
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+
+    files.sort((a, b) => b.$1.lastModifiedSync().compareTo(a.$1.lastModifiedSync()));
+    return files;
+  }
+
+  Future<File?> _pickLocalBackupFile(BuildContext context) async {
+    final files = await _getAvailableBackupFiles();
+
+    if (files.isEmpty) {
+      return null;
+    }
+
+    return showDialog<File>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Selecciona un backup'),
+        content: SizedBox(
+          width: 320,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: files.length,
+            itemBuilder: (context, index) {
+              final file = files[index].$1;
+              final source = files[index].$2;
+              return ListTile(
+                title: Text(file.uri.pathSegments.last),
+                subtitle: Text(source),
+                onTap: () => Navigator.pop(context, file),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        ],
+      ),
+    );
   }
 
   Future<void> _backupLocal(BuildContext context) async {
     try {
       final sourcePath = await _getDatabaseFilePath();
-      final backupPath = await _getLocalBackupFilePath();
+      final backupsDir = await _getPreferredBackupDirectory();
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final destinationPath = '${backupsDir.path}/tension_data_backup_$timestamp.db';
       final dbFile = File(sourcePath);
 
       if (!await dbFile.exists()) {
@@ -46,8 +136,8 @@ class ExportarDatosPage extends StatelessWidget {
         return;
       }
 
-      await dbFile.copy(backupPath);
-      _showMessage(context, 'Backup local creado en: $backupPath');
+      await dbFile.copy(destinationPath);
+      _showMessage(context, 'Backup local creado en: $destinationPath');
     } catch (e) {
       _showMessage(context, 'Error al crear backup local: $e');
     }
@@ -55,10 +145,14 @@ class ExportarDatosPage extends StatelessWidget {
 
   Future<void> _restoreLocal(BuildContext context) async {
     try {
-      final backupPath = await _getLocalBackupFilePath();
-      final backupFile = File(backupPath);
+      final backupFile = await _pickLocalBackupFile(context);
+      if (backupFile == null) {
+        _showMessage(context, 'No hay backups disponibles o restauración cancelada.');
+        return;
+      }
+
       if (!await backupFile.exists()) {
-        _showMessage(context, 'No existe un backup local para restaurar.');
+        _showMessage(context, 'El archivo seleccionado no existe o no es accesible.');
         return;
       }
 
@@ -66,8 +160,8 @@ class ExportarDatosPage extends StatelessWidget {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Restaurar backup'),
-          content: const Text(
-            'Esta acción reemplazará los datos actuales por los del backup local. ¿Deseas continuar?',
+          content: Text(
+            'Se reemplazarán los datos actuales con el contenido de:\n${backupFile.path}\n\n¿Deseas continuar?',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
@@ -84,8 +178,7 @@ class ExportarDatosPage extends StatelessWidget {
       await dbService.closeDatabase();
 
       final destinationPath = await _getDatabaseFilePath();
-      final destinationFile = File(destinationPath);
-      await backupFile.copy(destinationFile.path);
+      await backupFile.copy(destinationPath);
 
       _showMessage(context, 'Backup restaurado correctamente.');
     } catch (e) {
@@ -124,7 +217,7 @@ class ExportarDatosPage extends StatelessWidget {
       }
 
       final sortedData = [...datos]..sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
-      final excel = Excel.createExcel();
+      final excel = xls.Excel.createExcel();
       final String sheetName = excel.getDefaultSheet() ?? 'Sheet1';
       final sheet = excel.sheets[sheetName];
 
@@ -133,19 +226,19 @@ class ExportarDatosPage extends StatelessWidget {
         return;
       }
 
-      sheet.cell(CellIndex.indexByString('A1')).value = TextCellValue('Fecha y hora');
-      sheet.cell(CellIndex.indexByString('B1')).value = TextCellValue('Sístole');
-      sheet.cell(CellIndex.indexByString('C1')).value = TextCellValue('Diástole');
-      sheet.cell(CellIndex.indexByString('D1')).value = TextCellValue('Ritmo cardíaco');
+      sheet.cell(xls.CellIndex.indexByString('A1')).value = xls.TextCellValue('Fecha y hora');
+      sheet.cell(xls.CellIndex.indexByString('B1')).value = xls.TextCellValue('Sístole');
+      sheet.cell(xls.CellIndex.indexByString('C1')).value = xls.TextCellValue('Diástole');
+      sheet.cell(xls.CellIndex.indexByString('D1')).value = xls.TextCellValue('Ritmo cardíaco');
 
       final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
       for (int i = 0; i < sortedData.length; i++) {
         final row = i + 2;
         final item = sortedData[i];
-        sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(dateFormat.format(item.fechaHora));
-        sheet.cell(CellIndex.indexByString('B$row')).value = IntCellValue(item.sistole);
-        sheet.cell(CellIndex.indexByString('C$row')).value = IntCellValue(item.diastole);
-        sheet.cell(CellIndex.indexByString('D$row')).value = IntCellValue(item.ritmoCardiaco);
+        sheet.cell(xls.CellIndex.indexByString('A$row')).value = xls.TextCellValue(dateFormat.format(item.fechaHora));
+        sheet.cell(xls.CellIndex.indexByString('B$row')).value = xls.IntCellValue(item.sistole);
+        sheet.cell(xls.CellIndex.indexByString('C$row')).value = xls.IntCellValue(item.diastole);
+        sheet.cell(xls.CellIndex.indexByString('D$row')).value = xls.IntCellValue(item.ritmoCardiaco);
       }
 
       final excelBytes = excel.encode();
@@ -171,23 +264,37 @@ class ExportarDatosPage extends StatelessWidget {
     required Color color,
     required IconData icon,
     required String title,
+    String? subtitle,
   }) {
     return AnimatedButton(
       onPressed: onPressed,
-      width: 280,
-      height: 52,
+      width: 300,
+      height: 60,
       color: color,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: Colors.white),
           const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFFE2E8F0)),
+                  ),
+              ],
             ),
           ),
         ],
@@ -205,17 +312,27 @@ class ExportarDatosPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              const Text(
-                'Exporta, crea respaldo local o restaura tu información',
-                style: TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
+              Container(
+                width: 320,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Text(
+                  'Los backups se intentan guardar en una carpeta accesible del teléfono (Download/Documents de TomaTensionBackups). Si Android lo restringe, se usan los documentos internos de la app.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               _actionButton(
                 onPressed: () => _exportDatabase(context),
                 color: Colors.lightBlue,
                 icon: Icons.storage,
                 title: 'Compartir Base de Datos',
+                subtitle: 'Envía una copia por apps compatibles',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -223,6 +340,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.teal,
                 icon: Icons.insert_drive_file,
                 title: 'Compartir Archivo Excel',
+                subtitle: 'Genera un .xlsx con todas tus mediciones',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -230,6 +348,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.deepPurple,
                 icon: Icons.backup,
                 title: 'Crear Backup Local',
+                subtitle: 'Prioriza carpeta accesible del teléfono',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -237,6 +356,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.orange,
                 icon: Icons.settings_backup_restore,
                 title: 'Restaurar Backup Local',
+                subtitle: 'Busca backups en carpetas internas y públicas',
               ),
             ],
           ),
