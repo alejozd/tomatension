@@ -1,13 +1,11 @@
+import 'package:animated_button/animated_button.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Importa SharedPreferences
 
+import 'exportar_datos_page.dart';
 import 'tomar_tension_page.dart';
 import 'ver_datos_page.dart';
-import 'exportar_datos_page.dart';
-import 'migration_button_screen.dart'; // Importa la pantalla de migración
 import 'ver_grafico_page.dart';
-import 'package:animated_button/animated_button.dart';
 
 class BienvenidosPage extends StatefulWidget {
   const BienvenidosPage({super.key});
@@ -18,13 +16,11 @@ class BienvenidosPage extends StatefulWidget {
 
 class _BienvenidosPageState extends State<BienvenidosPage> {
   String _appVersion = '';
-  bool _migrationCompleted = true; // Asumimos completada hasta que se verifique
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
-    _checkMigrationStatus();
   }
 
   Future<void> _loadAppVersion() async {
@@ -34,205 +30,130 @@ class _BienvenidosPageState extends State<BienvenidosPage> {
     });
   }
 
-  Future<void> _checkMigrationStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool completed = prefs.getBool('migration_completed') ?? false;
-    setState(() {
-      _migrationCompleted = completed;
-    });
-    print(
-      'BienvenidosPage: Estado de migración completada: $_migrationCompleted',
+  Widget _menuButton({
+    required Color color,
+    required IconData icon,
+    required String title,
+    required VoidCallback onPressed,
+  }) {
+    return AnimatedButton(
+      onPressed: onPressed,
+      width: 260,
+      height: 56,
+      color: color,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
-  }
-
-  // Función para manejar la navegación a la pantalla de migración
-  Future<void> _navigateToMigrationScreen() async {
-    print('BienvenidosPage: Navegando a MigrationButtonScreen...');
-    // Usamos push y esperamos un resultado
-    final bool? migrationResult = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MigrationButtonScreen()),
-    );
-
-    // Si regresamos con 'true', significa que la migración se completó (o ya estaba hecha)
-    if (migrationResult == true) {
-      print(
-        'BienvenidosPage: Migración exitosa o ya completada. Actualizando estado.',
-      );
-      _checkMigrationStatus(); // Vuelve a verificar el estado para ocultar el botón
-      // Opcional: Podrías navegar a otra página o hacer un refresh de datos si fuera necesario
-    } else {
-      print('BienvenidosPage: Migración no completada o cancelada.');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Toma Tensión')),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('Toma Tensión'),
+        backgroundColor: const Color(0xFF4F46E5),
+        foregroundColor: Colors.white,
+      ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              '¡Bienvenido!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 30),
-
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TomarTensionPage(),
-                  ),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.blueAccent,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.add, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text(
-                    'Ingresar Datos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const VerDatosPage()),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.green,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 15.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: const [
-                    Icon(Icons.visibility, color: Colors.white),
-                    SizedBox(width: 10),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Container(
+                width: 320,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFD8E8FF)),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.favorite, color: Color(0xFFEF4444), size: 34),
+                    SizedBox(height: 8),
                     Text(
-                      'Ver Datos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      '¡Bienvenido!',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Selecciona una opción para gestionar tus mediciones.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF475569)),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 15),
-
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ExportarDatosPage(),
-                  ),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.redAccent,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.share, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text(
-                    'Exportar Datos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 24),
+              _menuButton(
+                color: Colors.blueAccent,
+                icon: Icons.add,
+                title: 'Ingresar Datos',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TomarTensionPage()),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 15),
-
-            // --- NUEVO BOTÓN: Ver Gráfico ---
-            AnimatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const VerGraficoPage(), // Navega a la nueva página
-                  ),
-                );
-              },
-              width: 200,
-              height: 50,
-              color: Colors.orange, // Color distintivo para el gráfico
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.show_chart, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text(
-                    'Ver Gráfico',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 12),
+              _menuButton(
+                color: Colors.green,
+                icon: Icons.visibility,
+                title: 'Ver Datos',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const VerDatosPage()),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 15),
-
-            // --- NUEVO BOTÓN DE MIGRACIÓN (CONDICIONAL) ---
-            if (!_migrationCompleted) // Solo se muestra si la migración no está completada
-              AnimatedButton(
-                onPressed: _navigateToMigrationScreen,
-                width: 230,
-                height: 50,
-                color: Colors.purple, // Un color distintivo
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.cloud_upload, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      'Migrar Datos Antiguos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 12),
+              _menuButton(
+                color: Colors.redAccent,
+                icon: Icons.share,
+                title: 'Exportar / Backup',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ExportarDatosPage()),
+                  );
+                },
               ),
-            const SizedBox(height: 30),
-            // Mostrar la versión de la aplicación
-            Text(
-              'Versión: $_appVersion',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _menuButton(
+                color: Colors.orange,
+                icon: Icons.show_chart,
+                title: 'Ver Gráfico',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const VerGraficoPage()),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Versión: $_appVersion',
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       ),
     );
