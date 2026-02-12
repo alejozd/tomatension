@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:animated_button/animated_button.dart';
 import 'package:excel/excel.dart' as xls;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,114 +27,73 @@ class ExportarDatosPage extends StatelessWidget {
     return '$databasePath/tension_data.db';
   }
 
-  Future<List<Directory>> _getCandidateBackupDirectories() async {
-    final List<Directory> dirs = [];
-
-    final appDocuments = await getApplicationDocumentsDirectory();
-    dirs.add(Directory('${appDocuments.path}/backups'));
-
-    if (Platform.isAndroid) {
-      dirs.add(Directory('/storage/emulated/0/Download/TomaTensionBackups'));
-      dirs.add(Directory('/storage/emulated/0/Documents/TomaTensionBackups'));
+  Future<String> _getDefaultBackupFilePath() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final backupsDir = Directory('${directory.path}/backups');
+    if (!await backupsDir.exists()) {
+      await backupsDir.create(recursive: true);
     }
-
-    return dirs;
+    return '${backupsDir.path}/tension_data_backup.db';
   }
 
-  Future<Directory> _getPreferredBackupDirectory() async {
-    final candidates = await _getCandidateBackupDirectories();
+  Future<String?> _pickBackupDestinationPath() async {
+    final String defaultPath = await _getDefaultBackupFilePath();
 
-    for (final dir in candidates) {
-      try {
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
-        }
-        return dir;
-      } catch (_) {
-        continue;
-      }
-    }
+    final selectedPath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Selecciona dónde guardar el backup',
+      fileName: 'tension_data_backup.db',
+      initialDirectory: File(defaultPath).parent.path,
+      type: FileType.custom,
+      allowedExtensions: ['db'],
+    );
 
-    throw Exception('No se pudo preparar ninguna carpeta de backup.');
-  }
-
-  Future<List<(File, String)>> _getAvailableBackupFiles() async {
-    final files = <(File, String)>[];
-    final seenPaths = <String>{};
-    final candidates = await _getCandidateBackupDirectories();
-
-    for (final dir in candidates) {
-      try {
-        if (!await dir.exists()) {
-          continue;
-        }
-
-        final sourceLabel = dir.path;
-        final dirFiles = dir
-            .listSync()
-            .whereType<File>()
-            .where((f) => f.path.toLowerCase().endsWith('.db'))
-            .toList();
-
-        for (final file in dirFiles) {
-          if (seenPaths.add(file.path)) {
-            files.add((file, sourceLabel));
-          }
-        }
-      } catch (_) {
-        continue;
-      }
-    }
-
-    files.sort((a, b) => b.$1.lastModifiedSync().compareTo(a.$1.lastModifiedSync()));
-    return files;
-  }
-
-  Future<File?> _pickLocalBackupFile(BuildContext context) async {
-    final files = await _getAvailableBackupFiles();
-
-    if (files.isEmpty) {
+    if (selectedPath == null || selectedPath.trim().isEmpty) {
       return null;
     }
 
-    return showDialog<File>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Selecciona un backup'),
-        content: SizedBox(
-          width: 320,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: files.length,
-            itemBuilder: (context, index) {
-              final file = files[index].$1;
-              final source = files[index].$2;
-              return ListTile(
-                title: Text(file.uri.pathSegments.last),
-                subtitle: Text(source),
-                onTap: () => Navigator.pop(context, file),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-        ],
-      ),
+    if (selectedPath.toLowerCase().endsWith('.db')) {
+      return selectedPath;
+    }
+
+    return '$selectedPath.db';
+  }
+
+  Future<File?> _pickBackupFileToRestore() async {
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Selecciona el archivo backup para restaurar',
+      allowMultiple: false,
+      type: FileType.custom,
+      allowedExtensions: ['db', 'sqlite', 'bak', 'backup'],
     );
+
+    final selectedPath = result?.files.single.path;
+    if (selectedPath == null || selectedPath.trim().isEmpty) {
+      return null;
+    }
+
+    return File(selectedPath);
   }
 
   Future<void> _backupLocal(BuildContext context) async {
     try {
       final sourcePath = await _getDatabaseFilePath();
-      final backupsDir = await _getPreferredBackupDirectory();
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final destinationPath = '${backupsDir.path}/tension_data_backup_$timestamp.db';
+      final destinationPath = await _pickBackupDestinationPath();
       final dbFile = File(sourcePath);
+
+      if (destinationPath == null) {
+        _showMessage(context, 'Backup cancelado.');
+        return;
+      }
 
       if (!await dbFile.exists()) {
         _showMessage(context, 'No se encontró la base de datos para crear backup.');
         return;
+      }
+
+      final destinationFile = File(destinationPath);
+      final parentDir = destinationFile.parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
       }
 
       await dbFile.copy(destinationPath);
@@ -145,9 +105,9 @@ class ExportarDatosPage extends StatelessWidget {
 
   Future<void> _restoreLocal(BuildContext context) async {
     try {
-      final backupFile = await _pickLocalBackupFile(context);
+      final backupFile = await _pickBackupFileToRestore();
       if (backupFile == null) {
-        _showMessage(context, 'No hay backups disponibles o restauración cancelada.');
+        _showMessage(context, 'Restauración cancelada.');
         return;
       }
 
@@ -278,7 +238,7 @@ class ExportarDatosPage extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -306,11 +266,10 @@ class ExportarDatosPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Exportar y Respaldar Datos')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
               Container(
                 width: 320,
@@ -321,7 +280,7 @@ class ExportarDatosPage extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: const Text(
-                  'Los backups se intentan guardar en una carpeta accesible del teléfono (Download/Documents de TomaTensionBackups). Si Android lo restringe, se usan los documentos internos de la app.',
+                  'En Android ahora puedes elegir dónde guardar el backup y desde qué archivo restaurar. Si no ves el selector, verifica permisos de almacenamiento del sistema/ROM.',
                   style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
                   textAlign: TextAlign.center,
                 ),
@@ -348,7 +307,7 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.deepPurple,
                 icon: Icons.backup,
                 title: 'Crear Backup Local',
-                subtitle: 'Prioriza carpeta accesible del teléfono',
+                subtitle: 'Te abre selector para elegir ubicación',
               ),
               const SizedBox(height: 12),
               _actionButton(
@@ -356,11 +315,10 @@ class ExportarDatosPage extends StatelessWidget {
                 color: Colors.orange,
                 icon: Icons.settings_backup_restore,
                 title: 'Restaurar Backup Local',
-                subtitle: 'Busca backups en carpetas internas y públicas',
+                subtitle: 'Te abre selector para elegir archivo backup',
               ),
             ],
           ),
-        ),
       ),
     );
   }
