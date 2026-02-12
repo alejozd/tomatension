@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:progress_state_button/progress_button.dart'; // Importa ProgressButton y su ButtonState
+import 'package:progress_state_button/progress_button.dart';
+
 import '../models/tension_data.dart';
 import '../services/database_service.dart';
-
-// Importa ButtonState de la librería
-// Ya no necesitas definirlo aquí si estás usando el de progress_state_button
-// enum ButtonState { idle, loading, success, fail }
 
 class VerDatosPage extends StatefulWidget {
   const VerDatosPage({super.key});
@@ -19,18 +16,14 @@ class _VerDatosPageState extends State<VerDatosPage> {
   final DatabaseService _databaseService = DatabaseService();
   late Future<List<TensionData>> _tensionDataList;
 
-  DateTime _startDate = DateTime.now().subtract(
-    const Duration(days: 30),
-  ); // Por defecto, últimos 30 días
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
-
-  ButtonState _filterButtonState =
-      ButtonState.idle; // Estado para el botón de filtro
+  ButtonState _filterButtonState = ButtonState.idle;
 
   @override
   void initState() {
     super.initState();
-    _filterData(); // Cargar datos iniciales con el rango predeterminado
+    _filterData();
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
@@ -40,42 +33,52 @@ class _VerDatosPageState extends State<VerDatosPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (picked != null && picked != _startDate) {
-      setState(() {
-        _startDate = picked;
-        // Si la fecha de inicio es posterior a la final, ajusta la final también.
-        if (_startDate.isAfter(_endDate)) {
-          _endDate = _startDate;
-        }
-      });
+
+    if (picked == null || picked == _startDate) {
+      return;
     }
+
+    setState(() {
+      _startDate = picked;
+      if (_startDate.isAfter(_endDate)) {
+        _endDate = _startDate;
+      }
+    });
   }
 
   Future<void> _selectEndDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _endDate,
-      firstDate:
-          _startDate, // La fecha final no puede ser anterior a la fecha de inicio
+      firstDate: _startDate,
       lastDate: DateTime.now(),
     );
-    if (picked != null && picked != _endDate) {
-      setState(() {
-        _endDate = picked;
-      });
+
+    if (picked == null || picked == _endDate) {
+      return;
     }
+
+    setState(() {
+      _endDate = picked;
+    });
   }
 
-  void _filterData() async {
+  void _applyQuickRange(int days) {
+    setState(() {
+      _endDate = DateTime.now();
+      _startDate = _endDate.subtract(Duration(days: days));
+    });
+    _filterData();
+  }
+
+  Future<void> _filterData() async {
     if (_startDate.isAfter(_endDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'La fecha de inicio no puede ser posterior a la fecha fin.',
-          ),
+          content: Text('La fecha de inicio no puede ser posterior a la fecha fin.'),
         ),
       );
-      // Restablecer el estado del botón si hay un error de validación
+
       if (mounted) {
         setState(() {
           _filterButtonState = ButtonState.fail;
@@ -93,29 +96,24 @@ class _VerDatosPageState extends State<VerDatosPage> {
 
     setState(() {
       _filterButtonState = ButtonState.loading;
+      _tensionDataList = _databaseService.getTensionDataByDateRange(_startDate, _endDate);
     });
 
     try {
-      _tensionDataList = _databaseService.getTensionDataByDateRange(
-        _startDate,
-        _endDate,
-      );
-      await _tensionDataList; // Esperar a que se resuelva el futuro para manejar éxito/fallo
-
+      await _tensionDataList;
       if (mounted) {
         setState(() {
           _filterButtonState = ButtonState.success;
         });
-        // No es necesario un SnackBar aquí, la lista se actualizará
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _filterButtonState = ButtonState.fail;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al filtrar datos: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al filtrar datos: $e')));
       }
     } finally {
       Future.delayed(const Duration(seconds: 2), () {
@@ -128,209 +126,254 @@ class _VerDatosPageState extends State<VerDatosPage> {
     }
   }
 
+  Widget _buildDateSelector({
+    required String label,
+    required DateTime date,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFDDE3EC)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.event, size: 16, color: Color(0xFF4F46E5)),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('dd/MM/yyyy').format(date),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReadingCard(TensionData data) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x120F172A),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E7FF),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  DateFormat('dd/MM/yyyy · HH:mm').format(data.fechaHora),
+                  style: const TextStyle(
+                    color: Color(0xFF3730A3),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _metricTile('Sístole', data.sistole.toString(), const Color(0xFF3B82F6)),
+              const SizedBox(width: 8),
+              _metricTile('Diástole', data.diastole.toString(), const Color(0xFF22C55E)),
+              const SizedBox(width: 8),
+              _metricTile('Ritmo', data.ritmoCardiaco.toString(), const Color(0xFFEF4444)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metricTile(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF475569),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ver Datos')),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('Ver Datos'),
+        backgroundColor: const Color(0xFF4F46E5),
+        foregroundColor: Colors.white,
+      ),
       body: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+        children: [
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment
-                  .start, // Alinea los textos de filtro a la izquierda
               children: [
-                const Text(
-                  'Filtrar por fecha',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment
-                      .start, // Alinea al inicio si hay varias líneas
                   children: [
-                    Expanded(
-                      // Ocupa el espacio disponible para las fechas
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const SizedBox(
-                                // Fija el ancho del label para alineación visual
-                                width: 100,
-                                child: Text(
-                                  'Fecha inicio:',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _selectStartDate(context),
-                                child: Text(
-                                  DateFormat('dd/MM/yyyy').format(_startDate),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(
-                            height: 10,
-                          ), // Espacio entre fecha inicio y fin
-                          Row(
-                            children: [
-                              const SizedBox(
-                                // Fija el ancho del label para alineación visual
-                                width: 100,
-                                child: Text(
-                                  'Fecha fin:',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _selectEndDate(context),
-                                child: Text(
-                                  DateFormat('dd/MM/yyyy').format(_endDate),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    _buildDateSelector(
+                      label: 'Fecha inicio',
+                      date: _startDate,
+                      onTap: () => _selectStartDate(context),
                     ),
-                    const SizedBox(
-                      width: 15,
-                    ), // Espacio entre fechas y botón OK
+                    const SizedBox(width: 8),
+                    _buildDateSelector(
+                      label: 'Fecha fin',
+                      date: _endDate,
+                      onTap: () => _selectEndDate(context),
+                    ),
+                    const SizedBox(width: 8),
                     ProgressButton(
                       stateWidgets: {
                         ButtonState.idle: const Text(
-                          "OK",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          'OK',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                         ),
-                        ButtonState.loading: const CircularProgressIndicator(
-                          color: Colors.white,
+                        ButtonState.loading: const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         ),
-                        ButtonState.success: const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                        ),
-                        ButtonState.fail: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                        ),
+                        ButtonState.success: const Icon(Icons.check, color: Colors.white),
+                        ButtonState.fail: const Icon(Icons.close, color: Colors.white),
                       },
                       stateColors: {
-                        ButtonState.idle: Colors.deepPurple,
-                        ButtonState.loading: Colors.blue.shade300,
-                        ButtonState.success: Colors.green.shade400,
+                        ButtonState.idle: const Color(0xFF4F46E5),
+                        ButtonState.loading: Colors.blue.shade400,
+                        ButtonState.success: Colors.green.shade500,
                         ButtonState.fail: Colors.red.shade400,
                       },
                       onPressed: _filterData,
                       state: _filterButtonState,
-                      minWidth: 80,
-                      maxWidth: 100,
-                      height:
-                          50, // Altura ajustada para abarcar ambas filas de fecha
-                      radius: 20,
+                      minWidth: 62,
+                      maxWidth: 62,
+                      height: 52,
+                      radius: 14,
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    OutlinedButton(onPressed: () => _applyQuickRange(7), child: const Text('7 días')),
+                    OutlinedButton(onPressed: () => _applyQuickRange(30), child: const Text('30 días')),
+                    OutlinedButton(onPressed: () => _applyQuickRange(90), child: const Text('90 días')),
                   ],
                 ),
               ],
             ),
           ),
-          const Divider(),
           Expanded(
             child: FutureBuilder<List<TensionData>>(
               future: _tensionDataList,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No hay datos registrados.'));
-                } else {
-                  return ListView.builder(
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final data = snapshot.data![index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        elevation: 4.0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Fila 1: Fecha y hora (al inicio arriba)
-                              Align(
-                                alignment: Alignment.topLeft,
-                                child: Text(
-                                  'Fecha y Hora: ${DateFormat('dd/MM/yyyy hh:mm a').format(data.fechaHora)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10), // Espacio entre filas
-                              // Fila 2: Sístole y Diástole
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Sístole: ${data.sistole}',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Diástole: ${data.diastole}',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 1), // Espacio entre filas
-                              // Fila 3: Ritmo Cardíaco (alineado a la izquierda)
-                              Align(
-                                alignment: Alignment.topLeft,
-                                child: Text(
-                                  'Ritmo Cardíaco: ${data.ritmoCardiaco}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.purple,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
                   );
                 }
+
+                final items = snapshot.data ?? [];
+                if (items.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No hay datos registrados para este rango.',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 15),
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: _filterData,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) => _buildReadingCard(items[index]),
+                  ),
+                );
               },
             ),
           ),
