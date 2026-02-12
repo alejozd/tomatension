@@ -1,8 +1,9 @@
+import 'package:animated_button/animated_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:animated_button/animated_button.dart';
 import 'package:progress_state_button/progress_button.dart';
+
 import '../models/tension_data.dart';
 import '../services/database_service.dart';
 
@@ -29,10 +30,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
     _sistoleController.addListener(_validateForm);
     _diastoleController.addListener(_validateForm);
     _ritmoCardiacoController.addListener(_validateForm);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _validateForm();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _validateForm());
   }
 
   @override
@@ -81,17 +79,19 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (pickedDate != null && pickedDate != _selectedDateTime) {
-      setState(() {
-        _selectedDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          _selectedDateTime.hour,
-          _selectedDateTime.minute,
-        );
-      });
+    if (pickedDate == null || pickedDate == _selectedDateTime) {
+      return;
     }
+
+    setState(() {
+      _selectedDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        _selectedDateTime.hour,
+        _selectedDateTime.minute,
+      );
+    });
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -99,25 +99,27 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
       context: context,
       initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
     );
-    if (pickedTime != null) {
-      setState(() {
-        _selectedDateTime = DateTime(
-          _selectedDateTime.year,
-          _selectedDateTime.month,
-          _selectedDateTime.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-      });
+    if (pickedTime == null) {
+      return;
     }
+
+    setState(() {
+      _selectedDateTime = DateTime(
+        _selectedDateTime.year,
+        _selectedDateTime.month,
+        _selectedDateTime.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
   }
 
   Future<void> _saveData() async {
     if (!_isFormValid) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Por favor, ingresa todos los datos.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Por favor, revisa los valores ingresados.')));
       }
       return;
     }
@@ -136,164 +138,240 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
 
       await _databaseService.insertTensionData(newTensionData);
 
-      if (mounted) {
-        setState(() {
-          _buttonState = ButtonState.success;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Datos guardados exitosamente')),
-        );
-        _sistoleController.clear();
-        _diastoleController.clear();
-        _ritmoCardiacoController.clear();
-        setState(() {
-          _selectedDateTime = DateTime.now();
-          _validateForm(); // Re-validar el formulario después de limpiar los campos
-        });
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _buttonState = ButtonState.idle;
-            });
-          }
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _buttonState = ButtonState.success;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Datos guardados exitosamente')));
+
+      _sistoleController.clear();
+      _diastoleController.clear();
+      _ritmoCardiacoController.clear();
+      setState(() {
+        _selectedDateTime = DateTime.now();
+      });
+      _validateForm();
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _buttonState = ButtonState.idle;
+          });
+        }
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _buttonState = ButtonState.fail; // Para indicar fallo de operación
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar datos: ${e.toString()}')),
-        );
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _buttonState =
-                  ButtonState.idle; // Volver a idle después del error
-            });
-          }
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _buttonState = ButtonState.fail;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar datos: ${e.toString()}')));
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _buttonState = ButtonState.idle;
+          });
+        }
+      });
     }
+  }
+
+  InputDecoration _fieldDecoration({
+    required String label,
+    required String hint,
+    required String helper,
+    required String text,
+    required int min,
+    required int max,
+    required IconData icon,
+  }) {
+    final int? value = int.tryParse(text.trim());
+    final bool hasError = text.trim().isNotEmpty && (value == null || value < min || value > max);
+
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      helperText: helper,
+      prefixIcon: Icon(icon, color: const Color(0xFF6366F1)),
+      errorText: hasError ? 'Valor fuera de rango ($min-$max)' : null,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.6),
+      ),
+    );
+  }
+
+  Widget _buildDateTimeCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required VoidCallback onPressed,
+    required Color color,
+    required String buttonText,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            AnimatedButton(
+              onPressed: onPressed,
+              width: double.infinity,
+              height: 38,
+              color: color,
+              child: Text(
+                buttonText,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Definimos los widgets para cada estado, incluyendo un estado para "Faltan Datos"
     final Map<ButtonState, Widget> stateWidgets = {
       ButtonState.idle: const Text(
-        "Guardar",
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        'Guardar lectura',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
       ),
-      ButtonState.loading: const Text(
-        "Cargando",
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      ButtonState.loading: const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
       ),
       ButtonState.success: const Text(
-        "¡Guardado!",
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        '¡Guardado!',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
       ),
       ButtonState.fail: const Text(
-        // Este es el estado que usaremos para "deshabilitado" visualmente
-        "Faltan Datos",
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        'Completa el formulario',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
       ),
     };
 
-    // Definimos los colores para cada estado
     final Map<ButtonState, Color> stateColors = {
-      ButtonState.idle: Colors.deepPurple,
-      ButtonState.loading: Colors.blue.shade300,
-      ButtonState.success: Colors.green.shade400,
-      ButtonState.fail:
-          Colors.grey.shade600, // Color gris para el estado deshabilitado/fallo
+      ButtonState.idle: const Color(0xFF4F46E5),
+      ButtonState.loading: Colors.blue.shade400,
+      ButtonState.success: Colors.green.shade500,
+      ButtonState.fail: Colors.grey.shade600,
     };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ingresar Datos de Tensión')),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('Ingresar Datos de Tensión'),
+        backgroundColor: const Color(0xFF4F46E5),
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Seleccionar Fecha',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  DateFormat('dd/MM/yyyy').format(_selectedDateTime),
-                  style: const TextStyle(fontSize: 16),
-                ),
-                AnimatedButton(
-                  onPressed: () => _selectDate(context),
-                  width: 120,
-                  height: 40,
-                  color: const Color.fromARGB(255, 87, 173, 216),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.calendar_today, color: Colors.white, size: 18),
-                      SizedBox(width: 5),
-                      Text(
-                        'Fecha',
-                        style: TextStyle(fontSize: 14, color: Colors.white),
-                      ),
-                    ],
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  _buildDateTimeCard(
+                    title: 'Fecha',
+                    value: DateFormat('dd/MM/yyyy').format(_selectedDateTime),
+                    icon: Icons.calendar_today_rounded,
+                    color: const Color(0xFF0EA5E9),
+                    buttonText: 'Cambiar fecha',
+                    onPressed: () => _selectDate(context),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            const Text(
-              'Seleccionar Hora',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  DateFormat('hh:mm a').format(_selectedDateTime),
-                  style: const TextStyle(fontSize: 16),
-                ),
-                AnimatedButton(
-                  onPressed: () => _selectTime(context),
-                  width: 120,
-                  height: 40,
-                  color: const Color.fromARGB(255, 66, 190, 104),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.access_time, color: Colors.white, size: 18),
-                      SizedBox(width: 5),
-                      Text(
-                        'Hora',
-                        style: TextStyle(fontSize: 14, color: Colors.white),
-                      ),
-                    ],
+                  const SizedBox(width: 10),
+                  _buildDateTimeCard(
+                    title: 'Hora',
+                    value: DateFormat('HH:mm').format(_selectedDateTime),
+                    icon: Icons.schedule_rounded,
+                    color: const Color(0xFF22C55E),
+                    buttonText: 'Cambiar hora',
+                    onPressed: () => _selectTime(context),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 30),
-
+            const SizedBox(height: 16),
+            const Text(
+              'Valores de la medición',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 10),
             TextField(
               controller: _sistoleController,
-              decoration: InputDecoration(
-                labelText: 'Sístole',
-                helperText: 'Rango recomendado: 60-260',
-                errorText: _sistoleController.text.trim().isNotEmpty &&
-                        (int.tryParse(_sistoleController.text.trim()) == null ||
-                            (int.tryParse(_sistoleController.text.trim()) ?? 0) < 60 ||
-                            (int.tryParse(_sistoleController.text.trim()) ?? 0) > 260)
-                    ? 'Valor no válido'
-                    : null,
+              decoration: _fieldDecoration(
+                label: 'Sístole',
+                hint: 'Ej: 120',
+                helper: 'Rango recomendado: 60 - 260',
+                text: _sistoleController.text,
+                min: 60,
+                max: 260,
+                icon: Icons.monitor_heart,
               ),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -301,15 +379,14 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
             const SizedBox(height: 10),
             TextField(
               controller: _diastoleController,
-              decoration: InputDecoration(
-                labelText: 'Diástole',
-                helperText: 'Rango recomendado: 40-180',
-                errorText: _diastoleController.text.trim().isNotEmpty &&
-                        (int.tryParse(_diastoleController.text.trim()) == null ||
-                            (int.tryParse(_diastoleController.text.trim()) ?? 0) < 40 ||
-                            (int.tryParse(_diastoleController.text.trim()) ?? 0) > 180)
-                    ? 'Valor no válido'
-                    : null,
+              decoration: _fieldDecoration(
+                label: 'Diástole',
+                hint: 'Ej: 80',
+                helper: 'Rango recomendado: 40 - 180',
+                text: _diastoleController.text,
+                min: 40,
+                max: 180,
+                icon: Icons.favorite_border,
               ),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -317,36 +394,30 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
             const SizedBox(height: 10),
             TextField(
               controller: _ritmoCardiacoController,
-              decoration: InputDecoration(
-                labelText: 'Ritmo Cardíaco',
-                helperText: 'Rango recomendado: 30-220',
-                errorText: _ritmoCardiacoController.text.trim().isNotEmpty &&
-                        (int.tryParse(_ritmoCardiacoController.text.trim()) == null ||
-                            (int.tryParse(_ritmoCardiacoController.text.trim()) ?? 0) < 30 ||
-                            (int.tryParse(_ritmoCardiacoController.text.trim()) ?? 0) > 220)
-                    ? 'Valor no válido'
-                    : null,
+              decoration: _fieldDecoration(
+                label: 'Ritmo Cardíaco',
+                hint: 'Ej: 72',
+                helper: 'Rango recomendado: 30 - 220',
+                text: _ritmoCardiacoController.text,
+                min: 30,
+                max: 220,
+                icon: Icons.favorite,
               ),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
-            const SizedBox(height: 30),
-
-            Center(
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
               child: ProgressButton(
-                stateWidgets: stateWidgets, // Usamos el mapa definido aquí
-                stateColors: stateColors, // Usamos el mapa definido aquí
-                // onPressed es null si el formulario no es válido, deshabilitando el botón
-                onPressed: _isFormValid && _buttonState == ButtonState.idle
-                    ? _saveData
-                    : null,
-                state:
-                    _buttonState, // El estado del botón se controla directamente
-                padding: const EdgeInsets.all(8.0),
-                minWidth: 150,
-                maxWidth: 200,
-                height: 50,
-                radius: 20,
+                stateWidgets: stateWidgets,
+                stateColors: stateColors,
+                onPressed: _isFormValid && _buttonState == ButtonState.idle ? _saveData : null,
+                state: _buttonState,
+                minWidth: 240,
+                maxWidth: 320,
+                height: 52,
+                radius: 14,
               ),
             ),
           ],
