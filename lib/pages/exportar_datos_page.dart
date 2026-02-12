@@ -21,10 +21,81 @@ class ExportarDatosPage extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<String> _getDatabaseFilePath() async {
+    final databasePath = await getDatabasesPath();
+    return '$databasePath/tension_data.db';
+  }
+
+  Future<String> _getLocalBackupFilePath() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final backupsDir = Directory('${directory.path}/backups');
+    if (!await backupsDir.exists()) {
+      await backupsDir.create(recursive: true);
+    }
+    return '${backupsDir.path}/tension_data_backup.db';
+  }
+
+  Future<void> _backupLocal(BuildContext context) async {
+    try {
+      final sourcePath = await _getDatabaseFilePath();
+      final backupPath = await _getLocalBackupFilePath();
+      final dbFile = File(sourcePath);
+
+      if (!await dbFile.exists()) {
+        _showMessage(context, 'No se encontró la base de datos para crear backup.');
+        return;
+      }
+
+      await dbFile.copy(backupPath);
+      _showMessage(context, 'Backup local creado en: $backupPath');
+    } catch (e) {
+      _showMessage(context, 'Error al crear backup local: $e');
+    }
+  }
+
+  Future<void> _restoreLocal(BuildContext context) async {
+    try {
+      final backupPath = await _getLocalBackupFilePath();
+      final backupFile = File(backupPath);
+      if (!await backupFile.exists()) {
+        _showMessage(context, 'No existe un backup local para restaurar.');
+        return;
+      }
+
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Restaurar backup'),
+          content: const Text(
+            'Esta acción reemplazará los datos actuales por los del backup local. ¿Deseas continuar?',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Restaurar')),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        return;
+      }
+
+      final dbService = DatabaseService();
+      await dbService.closeDatabase();
+
+      final destinationPath = await _getDatabaseFilePath();
+      final destinationFile = File(destinationPath);
+      await backupFile.copy(destinationFile.path);
+
+      _showMessage(context, 'Backup restaurado correctamente.');
+    } catch (e) {
+      _showMessage(context, 'Error al restaurar backup local: $e');
+    }
+  }
+
   Future<void> _exportDatabase(BuildContext context) async {
     try {
-      final databasePath = await getDatabasesPath();
-      final dbFile = File('$databasePath/tension_data.db');
+      final dbFile = File(await _getDatabaseFilePath());
 
       if (!await dbFile.exists()) {
         _showMessage(context, 'No se encontró la base de datos para exportar.');
@@ -95,64 +166,77 @@ class ExportarDatosPage extends StatelessWidget {
     }
   }
 
+  Widget _actionButton({
+    required VoidCallback onPressed,
+    required Color color,
+    required IconData icon,
+    required String title,
+  }) {
+    return AnimatedButton(
+      onPressed: onPressed,
+      width: 280,
+      height: 52,
+      color: color,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Exportar Datos')),
+      appBar: AppBar(title: const Text('Exportar y Respaldar Datos')),
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               const Text(
-                'Comparte tus datos por el medio que prefieras',
+                'Exporta, crea respaldo local o restaura tu información',
                 style: TextStyle(fontSize: 18),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 30),
-              AnimatedButton(
+              const SizedBox(height: 24),
+              _actionButton(
                 onPressed: () => _exportDatabase(context),
-                width: 250,
-                height: 55,
                 color: Colors.lightBlue,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.storage, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      'Archivo de Base de Datos',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                icon: Icons.storage,
+                title: 'Compartir Base de Datos',
               ),
-              const SizedBox(height: 15),
-              AnimatedButton(
+              const SizedBox(height: 12),
+              _actionButton(
                 onPressed: () => _exportToExcel(context),
-                width: 250,
-                height: 55,
                 color: Colors.teal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.insert_drive_file, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      'Archivo de Excel',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                icon: Icons.insert_drive_file,
+                title: 'Compartir Archivo Excel',
+              ),
+              const SizedBox(height: 12),
+              _actionButton(
+                onPressed: () => _backupLocal(context),
+                color: Colors.deepPurple,
+                icon: Icons.backup,
+                title: 'Crear Backup Local',
+              ),
+              const SizedBox(height: 12),
+              _actionButton(
+                onPressed: () => _restoreLocal(context),
+                color: Colors.orange,
+                icon: Icons.settings_backup_restore,
+                title: 'Restaurar Backup Local',
               ),
             ],
           ),

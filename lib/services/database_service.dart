@@ -77,6 +77,14 @@ class DatabaseService {
     }
   }
 
+
+  Future<void> closeDatabase() async {
+    if (_database != null && _database!.isOpen) {
+      await _database!.close();
+      _database = null;
+    }
+  }
+
   Future<int> insertTensionData(TensionData data) async {
     final db = await database;
     return await db.insert(
