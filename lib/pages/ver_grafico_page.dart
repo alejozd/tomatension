@@ -427,7 +427,7 @@ class _VerGraficoPageState extends State<VerGraficoPage> {
           fitInsideHorizontally: true,
           fitInsideVertically: true,
           tooltipPadding: const EdgeInsets.all(10),
-          tooltipBorderRadius: BorderRadius.circular(10),
+          tooltipRoundedRadius: 10,
           getTooltipColor: (_) => const Color(0xFF0F172A).withOpacity(0.92),
           getTooltipItems: (spots) {
             return spots.map((spot) {
