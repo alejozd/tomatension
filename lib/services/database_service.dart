@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/tension_data.dart';
@@ -92,6 +95,43 @@ class DatabaseService {
       data.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<void> syncTensionData(TensionData data, {int pacienteId = 1}) async {
+    final HttpClient client = HttpClient();
+
+    try {
+      final HttpClientRequest request = await client.postUrl(
+        Uri.parse('http://localhost:3100/api/toma-tension/sync'),
+      );
+
+      request.headers.contentType = ContentType.json;
+      request.add(
+        utf8.encode(
+          jsonEncode({
+            'paciente_id': pacienteId,
+            'sistole': data.sistole,
+            'diastole': data.diastole,
+            'ritmoCardiaco': data.ritmoCardiaco,
+            'fecha_registro': data.fechaHora.toIso8601String().split('.').first,
+          }),
+        ),
+      );
+
+      final HttpClientResponse response = await request.close();
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final String responseBody = await response.transform(utf8.decoder).join();
+        print(
+          'No se pudo sincronizar con el backend. '
+          'Status: ${response.statusCode}, Response: $responseBody',
+        );
+      }
+    } catch (e) {
+      print('Error al sincronizar toma de tensión: $e');
+    } finally {
+      client.close(force: true);
+    }
   }
 
   Future<List<TensionData>> getTensionData() async {

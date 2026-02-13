@@ -136,6 +136,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
       );
 
       await _databaseService.insertTensionData(newTensionData);
+      await _databaseService.syncTensionData(newTensionData);
 
       if (!mounted) {
         return;
