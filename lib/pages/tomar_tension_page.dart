@@ -1,4 +1,3 @@
-import 'package:animated_button/animated_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -221,62 +220,45 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
     );
   }
 
-  Widget _buildDateTimeCard({
-    required String title,
+  Widget _buildDateTimeField({
+    required String label,
     required String value,
     required IconData icon,
-    required VoidCallback onPressed,
-    required Color color,
-    required String buttonText,
+    required VoidCallback onTap,
+    required String hint,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: const Color(0xFF6366F1)),
+          suffixIcon: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF6366F1)),
+          helperText: 'Toca el campo para editar',
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.6),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(icon, size: 16, color: color),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Color(0xFF0F172A),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            AnimatedButton(
-              onPressed: onPressed,
-              width: double.infinity,
-              height: 38,
-              color: color,
-              child: Text(
-                buttonText,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+        child: Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -323,34 +305,20 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                children: [
-                  _buildDateTimeCard(
-                    title: 'Fecha',
-                    value: DateFormat('dd/MM/yyyy').format(_selectedDateTime),
-                    icon: Icons.calendar_today_rounded,
-                    color: const Color(0xFF0EA5E9),
-                    buttonText: 'Cambiar fecha',
-                    onPressed: () => _selectDate(context),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildDateTimeCard(
-                    title: 'Hora',
-                    value: DateFormat('HH:mm').format(_selectedDateTime),
-                    icon: Icons.schedule_rounded,
-                    color: const Color(0xFF22C55E),
-                    buttonText: 'Cambiar hora',
-                    onPressed: () => _selectTime(context),
-                  ),
-                ],
-              ),
+            _buildDateTimeField(
+              label: 'Fecha de la medición',
+              value: DateFormat('dd/MM/yyyy').format(_selectedDateTime),
+              icon: Icons.calendar_today_rounded,
+              hint: 'Selecciona una fecha',
+              onTap: () => _selectDate(context),
+            ),
+            const SizedBox(height: 10),
+            _buildDateTimeField(
+              label: 'Hora de la medición',
+              value: DateFormat('HH:mm').format(_selectedDateTime),
+              icon: Icons.schedule_rounded,
+              hint: 'Selecciona una hora',
+              onTap: () => _selectTime(context),
             ),
             const SizedBox(height: 16),
             const Text(
