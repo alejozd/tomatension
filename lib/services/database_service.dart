@@ -102,7 +102,7 @@ class DatabaseService {
 
     try {
       final HttpClientRequest request = await client.postUrl(
-        Uri.parse('http://localhost:3100/api/toma-tension/sync'),
+        Uri.parse('https://api.zdevs.uk/api/toma-tension/sync'),
       );
 
       request.headers.contentType = ContentType.json;
