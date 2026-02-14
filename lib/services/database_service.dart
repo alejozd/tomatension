@@ -11,6 +11,9 @@ class DatabaseService {
   static Database? _database;
   static Timer? _retryTimer;
   static bool _isRetryInProgress = false;
+  static int _retryAttemptsInCurrentCycle = 0;
+
+  static const int _maxRetryAttempts = 5;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -114,6 +117,7 @@ class DatabaseService {
   Future<void> closeDatabase() async {
     _retryTimer?.cancel();
     _retryTimer = null;
+    _retryAttemptsInCurrentCycle = 0;
 
     if (_database != null && _database!.isOpen) {
       await _database!.close();
@@ -154,7 +158,7 @@ class DatabaseService {
       ritmoCardiaco: data.ritmoCardiaco,
       fechaRegistro: data.fechaHora.toIso8601String().split('.').first,
     );
-    _scheduleRetry();
+    _scheduleRetry(resetCycle: true);
   }
 
   Future<bool> _sendSyncRequest({
@@ -224,9 +228,22 @@ class DatabaseService {
     });
   }
 
-  void _scheduleRetry() {
+  void _scheduleRetry({bool resetCycle = false}) {
+    if (resetCycle) {
+      _retryAttemptsInCurrentCycle = 0;
+    }
+
+    if (_retryAttemptsInCurrentCycle >= _maxRetryAttempts) {
+      print(
+        'Se alcanzó el límite de $_maxRetryAttempts reintentos automáticos. '
+        'Se esperará al siguiente guardado para reanudar la sincronización.',
+      );
+      return;
+    }
+
     _retryTimer?.cancel();
     _retryTimer = Timer(const Duration(seconds: 30), () {
+      _retryAttemptsInCurrentCycle++;
       unawaited(_retryPendingSyncQueue());
     });
   }
@@ -263,6 +280,8 @@ class DatabaseService {
           return;
         }
 
+        _retryAttemptsInCurrentCycle = 0;
+
         await db.delete(
           'PendingSyncTensionData',
           where: 'id = ?',
@@ -277,6 +296,8 @@ class DatabaseService {
 
       if (remaining > 0) {
         _scheduleRetry();
+      } else {
+        _retryAttemptsInCurrentCycle = 0;
       }
     } finally {
       _isRetryInProgress = false;
