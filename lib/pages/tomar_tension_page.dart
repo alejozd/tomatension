@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -136,6 +138,7 @@ class _TomarTensionPageState extends State<TomarTensionPage> {
       );
 
       await _databaseService.insertTensionData(newTensionData);
+      unawaited(_databaseService.syncTensionDataWithRetry(newTensionData));
 
       if (!mounted) {
         return;
